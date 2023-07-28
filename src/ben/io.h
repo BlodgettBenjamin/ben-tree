@@ -7,7 +7,7 @@
 
 namespace btl
 {
-	i32 print(ben::str128 format, ...)
+	i32 print(ben::str120 format, ...)
 	{
 		va_list arg;
 		i32 done;
