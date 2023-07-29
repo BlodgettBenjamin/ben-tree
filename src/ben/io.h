@@ -1,12 +1,23 @@
 #pragma once
 
 #include <stdarg.h>
-#include <stdio.h>
 
-#include "string.h"
+#include "type.h"
 
 namespace btl
 {
+	i32 print(const char* format, ...)
+	{
+		va_list arg;
+		i32 done;
+
+		va_start(arg, format);
+		done = vfprintf(stdout, format, arg);
+		va_end(arg);
+
+		return done;
+	}
+#ifdef _BEN_STRING
 	i32 print(ben::str120 format, ...)
 	{
 		va_list arg;
@@ -18,4 +29,5 @@ namespace btl
 
 		return done;
 	}
+#endif
 }
