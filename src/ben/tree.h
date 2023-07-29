@@ -37,7 +37,7 @@ namespace btl
 
 		memcpy(child_data + size - 1, child, sizeof(child_t));
 
-		return child_data;
+		return child_data + size - 1;
 	}
 
 	/*struct vec3
