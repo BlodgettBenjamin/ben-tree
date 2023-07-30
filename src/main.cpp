@@ -30,6 +30,12 @@ int main()
 	btl::branch<void, color> position_branch(nullptr, color_data);
 	color new_color;
 	color_data = position_branch.add_child(&new_color);
+	new_color = { 0.0f, 1.0f, 0.0f, 1.0f };
+	color_data = position_branch.add_child(&new_color);
+	new_color = { 1.0f, 0.0f, 1.0f, 1.0f };
+	color_data = position_branch.add_child(&new_color);
+	new_color = { 0.0f, 0.0f, 1.0f, 1.0f };
+	color_data = position_branch.add_child(&new_color);
 
 	assert(color_data == position_branch.child_data);
 

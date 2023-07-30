@@ -34,28 +34,16 @@ namespace btl
 	template <typename parent_t, typename child_t>
 	child_t* branch<parent_t, child_t>::add_child(const child_t* child)
 	{
-		if (size == 0)
-		{
-
-			child_data = (child_t*)malloc(sizeof(child_t));
-		}
-		else
-		{
-			child_data = (child_t*)realloc(child_data, sizeof(child_t) * size + 1);
-		}
-
-		memcpy(child_data + size, child, sizeof(child_t));
 		size++;
+
+		child_t* ptr = (child_t*)realloc(child_data, sizeof(child_t) * size);
+
+		if (!ptr)
+			return nullptr;
+
+		child_data = ptr;
+		memcpy(child_data + size - 1, child, sizeof(child_t));
 
 		return child_data;
 	}
-
-	/*struct vec3
-	{
-		
-	};
-	struct epic_tree
-	{
-
-	};*/
 }
