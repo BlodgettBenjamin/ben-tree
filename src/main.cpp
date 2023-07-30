@@ -29,10 +29,19 @@ int main()
 
 	btl::branch<void, color> position_branch(nullptr, color_data);
 	color new_color;
-	if (!color_data)
-		color_data = position_branch.add_child(&new_color);
+	color_data = position_branch.add_child(&new_color);
 
 	assert(color_data == position_branch.child_data);
+
+	btl::branch<btl::branch<void, color>, ben::str120> color_branch(&position_branch, string_data);
+	ben::str120 new_string;
+	string_data = color_branch.add_child(&new_string);
+
+	assert(string_data == color_branch.child_data);
+	
+	free(position_data);
+	free(color_data);
+	free(string_data);
 	
 	return 0;
 }

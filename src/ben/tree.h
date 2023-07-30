@@ -15,6 +15,7 @@ namespace btl
 		child_t* child_data = nullptr;
 
 		branch(parent_t* parent, child_t* child_data);
+		~branch();
 		child_t* add_child(const child_t* child);
 	};
 
@@ -24,20 +25,29 @@ namespace btl
 	{}
 
 	template <typename parent_t, typename child_t>
+	branch<parent_t, child_t>::~branch()
+	{
+		parent = nullptr;
+		child_data == nullptr;
+	}
+
+	template <typename parent_t, typename child_t>
 	child_t* branch<parent_t, child_t>::add_child(const child_t* child)
 	{
 		if (size == 0)
 		{
-			child_data = (child_t*)malloc(sizeof(child_t) * size++);
+
+			child_data = (child_t*)malloc(sizeof(child_t));
 		}
 		else
 		{
-			realloc(child_data, sizeof(child_t) * size++);
+			child_data = (child_t*)realloc(child_data, sizeof(child_t) * size + 1);
 		}
 
-		memcpy(child_data + size - 1, child, sizeof(child_t));
+		memcpy(child_data + size, child, sizeof(child_t));
+		size++;
 
-		return child_data + size - 1;
+		return child_data;
 	}
 
 	/*struct vec3
