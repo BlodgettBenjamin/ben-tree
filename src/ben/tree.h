@@ -16,7 +16,8 @@ namespace btl
 
 		branch(parent_t* parent, child_t* child_data);
 		~branch();
-		child_t* add_child(const child_t* child);
+		child_t* add_child(const child_t* new_child_data, u64 count = 1);
+		child_t* set_child(const child_t* new_child_data, u64 size = 1);
 	};
 
 	template <typename parent_t, typename child_t>
@@ -28,21 +29,45 @@ namespace btl
 	branch<parent_t, child_t>::~branch()
 	{
 		parent = nullptr;
-		child_data == nullptr;
+		child_data = nullptr;
 	}
 
 	template <typename parent_t, typename child_t>
-	child_t* branch<parent_t, child_t>::add_child(const child_t* child)
+	child_t* branch<parent_t, child_t>::add_child(const child_t* new_child_data, u64 count)
 	{
-		size++;
+		size += count;
 
-		child_t* ptr = (child_t*)realloc(child_data, sizeof(child_t) * size);
+		child_t* allocation = (child_t*)realloc(child_data, sizeof(child_t) * size);
 
-		if (!ptr)
+		if (!allocation)
+			return nullptr;//print something
+
+		child_data = allocation;
+		memcpy(child_data + size - count, new_child_data, sizeof(child_t) * count);
+
+		return child_data;
+	}
+
+	template <typename parent_t, typename child_t>
+	child_t* branch<parent_t, child_t>::set_child(const child_t* new_child_data, u64 size)
+	{
+		this->size = size;
+
+		if (!new_child_data)
+		{
+			free(child_data);
+			child_data = nullptr;
 			return nullptr;
+		}
 
-		child_data = ptr;
-		memcpy(child_data + size - 1, child, sizeof(child_t));
+		const u64 allocation_size = sizeof(child_t) * size;
+		child_t* allocation = (child_t*)realloc(child_data, allocation_size);
+
+		if (!allocation)
+			return nullptr;//print something
+
+		child_data = allocation;
+		memcpy(child_data, new_child_data, allocation_size);
 
 		return child_data;
 	}
