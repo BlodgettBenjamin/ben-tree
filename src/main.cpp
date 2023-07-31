@@ -23,11 +23,28 @@ struct color
 
 int main()
 {
+	btl::branch<void, color>* position_layer;
+	btl::branch<btl::branch<void, color>, ben::str120>* color_layer;
+	btl::branch<btl::branch<btl::branch<void, color>, ben::str120>, void>* string_layer;
 	vec3* position_data = nullptr;
 	color* color_data = nullptr;
 	ben::str120* string_data = nullptr;
 
-	btl::branch<void, color> position_branch(nullptr, color_data);
+	auto tmp_pos = (btl::branch<void, color>*)calloc(1, sizeof(btl::branch<void, color>));
+	assert(tmp_pos != 0);
+	auto tmp_pos2 = (btl::branch<void, color>*)malloc(sizeof(btl::branch<void, color>));
+	assert(tmp_pos2 != 0);
+
+	memset(tmp_pos2, 0, sizeof(btl::branch<void, color>));
+	assert(memcmp(tmp_pos, tmp_pos2, sizeof(btl::branch<void, color>)) == 0);
+
+	if (!tmp_pos)
+		return -1;//print something
+
+	position_layer = tmp_pos;
+	*position_layer = btl::branch<void, color>(nullptr, color_data);
+	auto position_branch = *position_layer;
+
 	color new_color;
 	color_data = position_branch.add_child(&new_color);
 	new_color = { 0.0f, 1.0f, 0.0f, 1.0f };
