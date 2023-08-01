@@ -5,18 +5,8 @@
 
 namespace btl
 {
-	// btl::branch is a node that takes advantage of templates. it points to a parent branch node
-	// and non child node data. it is meant to be used with a data oriented design. it both
-	// maintains a pointer to it's specific data as well as a 64 bit index. this is perhaps
-	// redundant and the index might be removed altogether in favor of simply calculating a
-	// difference using the child_data pointer but memory use is not a concern for this class.
-	// it is meant for use in a dynamic tree structure which will lend itself well to 
-	// serialization and use with data oriented design. in practice the branches within the same
-	// layers will point to entirely different allocations prior to serialization. during
-	// serialization the tree structure can probe the branches to determine a fixed total
-	// allocation and the entire tree with the conceptual branches and layer allocations can be
-	// allocated in bulk. no protocol for a non-linear resizing of memory is used because after
-	// serialization the tree is not intended for applications which require lots of resizing.
+	// btl::branch points to parent branch node and to child DATA. i dont think this makes
+	// sense and needs to be reworked to be useful most likely.
 	template <typename parent_t, typename child_t>
 	struct branch
 	{
@@ -48,13 +38,13 @@ namespace btl
 	{
 		size += count;
 
-		child_t* allocation = (child_t*)realloc(child_data, sizeof(child_t) * size);
+		child_t* allocation = btl::reallocate(child_data, size);
 
 		if (!allocation)
 			return nullptr;//print something
 
 		child_data = allocation;
-		memcpy(child_data + size - count, new_child_data, sizeof(child_t) * count);
+		btl::memory_copy(child_data + size - count, new_child_data, count);
 
 		return child_data;
 	}
@@ -71,14 +61,13 @@ namespace btl
 			return nullptr;
 		}
 
-		const u64 allocation_size = sizeof(child_t) * size;
-		child_t* allocation = (child_t*)realloc(child_data, allocation_size);
+		child_t* allocation = btl::reallocate(child_data, size);
 
 		if (!allocation)
 			return nullptr;//print something
 
 		child_data = allocation;
-		memcpy(child_data, new_child_data, allocation_size);
+		btl::memory_copy(child_data, new_child_data, size);
 
 		return child_data;
 	}

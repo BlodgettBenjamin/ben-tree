@@ -1,7 +1,10 @@
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <stdio.h>
 #include <cassert>
 
+#include "ben/type.h"
+#include "ben/memory.h"
 #include "ben/string.h"
 #include "ben/io.h"
 #include "ben/tree.h"
@@ -73,10 +76,10 @@ int main()
 
 	assert(color_data == position_branch.child_data);
 
-	color_data = (color*)malloc(sizeof(color) * position_branch.size);
+	color_data = (color*)std::malloc(sizeof(color) * position_branch.size);
 	assert(color_data != 0);
-	memcpy(color_data, position_branch.child_data, sizeof(color) * position_branch.size);
-	assert(memcmp(color_data, position_branch.child_data, position_branch.size) == 0);
+	std::memcpy(color_data, position_branch.child_data, sizeof(color) * position_branch.size);
+	assert(std::memcmp(color_data, position_branch.child_data, position_branch.size) == 0);
 
 	position_branch.set_child(nullptr, 0);
 
@@ -97,12 +100,12 @@ int main()
 	assert(tmp == position_branch.child_data);
 	assert(color_data != position_branch.child_data);
 	assert(position_branch.child_data != 0);
-	assert(memcmp(color_data, position_branch.child_data, sizeof(new_color_data)) == 0);
+	assert(std::memcmp(color_data, position_branch.child_data, sizeof(new_color_data)) == 0);
 	
 	color_data = tmp;
 
 	assert(color_data == tmp);
-	assert(memcmp(color_data, position_branch.child_data, sizeof(new_color_data)) == 0);
+	assert(std::memcmp(color_data, position_branch.child_data, sizeof(new_color_data)) == 0);
 	assert(position_branch.size == sizeof(new_color_data));
 
 	btl::branch<btl::branch<void, color>, ben::str120> color_branch(&position_branch, string_data);

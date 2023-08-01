@@ -1,5 +1,4 @@
 #pragma once
-#define _BEN_TYPE
 
 #ifdef _STDINT
 typedef uint8_t  u8;
