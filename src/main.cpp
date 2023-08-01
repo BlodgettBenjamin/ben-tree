@@ -21,29 +21,46 @@ struct color
 	float a = 1.0f;
 };
 
+template <typename parent_branch_t, typename child_branch_t>
+struct layer
+{
+	u64 size = 0;
+	btl::branch<parent_branch_t, child_branch_t>* layer_ptr = nullptr;
+
+	void add_branch(parent_branch_t* parent_branch_ptr, child_branch_t* child_branch_ptr);
+};
+
+template <typename parent_branch_t, typename child_branch_t>
+void layer<parent_branch_t, child_branch_t>::add_branch(parent_branch_t* parent_branch_ptr, child_branch_t* child_branch_ptr)
+{
+	size++;
+	auto tmp_layer_ptr = btl::reallocate(layer_ptr, size);
+
+	if (!tmp_layer_ptr)
+		return;//print something
+
+	layer_ptr = tmp_layer_ptr;
+
+	btl::branch<parent_branch_t, child_branch_t> temp(parent_branch_ptr, child_branch_ptr);
+
+	btl::memory_copy(layer_ptr + size - 1, &temp);
+}
+
 int main()
 {
-	btl::branch<void, color>* position_layer;
-	btl::branch<btl::branch<void, color>, ben::str120>* color_layer;
-	btl::branch<btl::branch<btl::branch<void, color>, ben::str120>, void>* string_layer;
+
+	u64 position_layer_size, color_layer_size, string_layer_size;
+	position_layer_size = color_layer_size = string_layer_size = 0;
+	layer<void, color>                                                  position_layer;
+	layer<btl::branch<void, color>, ben::str120>                        color_layer;
+	layer<btl::branch<btl::branch<void, color>, ben::str120>, void>     string_layer;
 	vec3* position_data = nullptr;
 	color* color_data = nullptr;
 	ben::str120* string_data = nullptr;
 
-	auto tmp_pos = (btl::branch<void, color>*)calloc(1, sizeof(btl::branch<void, color>));
-	assert(tmp_pos != 0);
-	auto tmp_pos2 = (btl::branch<void, color>*)malloc(sizeof(btl::branch<void, color>));
-	assert(tmp_pos2 != 0);
+	position_layer.add_branch(nullptr, color_data);
 
-	memset(tmp_pos2, 0, sizeof(btl::branch<void, color>));
-	assert(memcmp(tmp_pos, tmp_pos2, sizeof(btl::branch<void, color>)) == 0);
-
-	if (!tmp_pos)
-		return -1;//print something
-
-	position_layer = tmp_pos;
-	*position_layer = btl::branch<void, color>(nullptr, color_data);
-	auto position_branch = *position_layer;
+	auto& position_branch = *position_layer.layer_ptr;
 
 	color new_color;
 	color_data = position_branch.add_child(&new_color);
