@@ -4,7 +4,7 @@
 
 #include "type.h"
 
-namespace btl
+namespace ben
 {
 	i32 print(const char* format, ...)
 	{

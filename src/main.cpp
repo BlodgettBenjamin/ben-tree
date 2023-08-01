@@ -7,7 +7,7 @@
 #include "ben/memory.h"
 #include "ben/string.h"
 #include "ben/io.h"
-#include "ben/tree.h"
+//#include "ben/tree.h"
 
 struct vec3
 {
@@ -24,99 +24,61 @@ struct color
 	float a = 1.0f;
 };
 
-template <typename parent_branch_t, typename child_branch_t>
-struct layer
+namespace btl
 {
-	u64 size = 0;
-	btl::branch<parent_branch_t, child_branch_t>* layer_ptr = nullptr;
+	template <class sizes_array_t, u64 layer_count_t>
+	struct tree
+	{
+		u64* layer_sizes = nullptr;
+		void** layers = nullptr;
 
-	void add_branch(parent_branch_t* parent_branch_ptr, child_branch_t* child_branch_ptr);
-};
+		tree();
+		void add(u8 layer, const void* data_ptr, u64 count = 1);
+	};
 
-template <typename parent_branch_t, typename child_branch_t>
-void layer<parent_branch_t, child_branch_t>::add_branch(parent_branch_t* parent_branch_ptr, child_branch_t* child_branch_ptr)
-{
-	size++;
-	auto tmp_layer_ptr = btl::reallocate(layer_ptr, size);
+	template <class sizes_array_t, u64 layer_count_t>
+	tree<sizes_array_t, layer_count_t>::tree()
+	{
+		layer_sizes = (u64*)calloc(layer_count_t, sizeof(u64));
+		
+		if (!layer_sizes)
+			return;//complain
 
-	if (!tmp_layer_ptr)
-		return;//print something
+		layers = (void**)calloc(layer_count_t, sizeof(void*));
 
-	layer_ptr = tmp_layer_ptr;
+		if (!layers)
+			return;//complain
+	}
 
-	btl::branch<parent_branch_t, child_branch_t> temp(parent_branch_ptr, child_branch_ptr);
+	template <class sizes_array_t, u64 layer_count_t>
+	void tree<sizes_array_t, layer_count_t>::add(u8 layer_index, const void* data_ptr, u64 count)
+	{
+		layer_sizes[layer_index] += count;
+		layers[layer_index] = realloc(layers[layer_index], layer_sizes[layer_index] * sizes_array_t[layer_index]);
 
-	btl::memory_copy(layer_ptr + size - 1, &temp);
+		if (!layers[layer_index])
+			return;//complain
+
+		auto cpy_result = memcpy(layers[layer_index] + (layer_sizes[layer_index] - count) * sizes_array_t[layer_index], data_ptr, count * sizes_array_t[layer_index]);
+		
+		if (!cpy_result)
+			return;//complain
+	}
 }
 
 int main()
 {
-
-	u64 position_layer_size, color_layer_size, string_layer_size;
-	position_layer_size = color_layer_size = string_layer_size = 0;
-	layer<void, color>                                                  position_layer;
-	layer<btl::branch<void, color>, ben::str120>                        color_layer;
-	layer<btl::branch<btl::branch<void, color>, ben::str120>, void>     string_layer;
-	vec3* position_data = nullptr;
-	color* color_data = nullptr;
-	ben::str120* string_data = nullptr;
-
-	position_layer.add_branch(nullptr, color_data);
-
-	auto& position_branch = *position_layer.layer_ptr;
-
-	color new_color;
-	color_data = position_branch.add_child(&new_color);
-	new_color = { 0.0f, 1.0f, 0.0f, 1.0f };
-	color_data = position_branch.add_child(&new_color);
-	new_color = { 1.0f, 0.0f, 1.0f, 1.0f };
-	color_data = position_branch.add_child(&new_color);
-	new_color = { 0.0f, 0.0f, 1.0f, 1.0f };
-	color_data = position_branch.add_child(&new_color);
-
-	assert(color_data == position_branch.child_data);
-
-	color_data = (color*)std::malloc(sizeof(color) * position_branch.size);
-	assert(color_data != 0);
-	std::memcpy(color_data, position_branch.child_data, sizeof(color) * position_branch.size);
-	assert(std::memcmp(color_data, position_branch.child_data, position_branch.size) == 0);
-
-	position_branch.set_child(nullptr, 0);
-
-	assert(position_branch.size != 4);
-	assert(position_branch.size == 0);
-
-	assert(position_branch.child_data == nullptr);
-	assert(color_data != position_branch.child_data);
-
-	color new_color_data[] = {
-		color(),
-		{ 0.0f, 1.0f, 0.0f, 1.0f },
-		{ 1.0f, 0.0f, 1.0f, 1.0f },
-		{ 0.0f, 0.0f, 1.0f, 1.0f }
+	enum class tree_struct_layer : u8
+	{
+		vec3, color, str,
 	};
-	color* tmp = position_branch.set_child(new_color_data, sizeof(new_color_data));
-
-	assert(tmp == position_branch.child_data);
-	assert(color_data != position_branch.child_data);
-	assert(position_branch.child_data != 0);
-	assert(std::memcmp(color_data, position_branch.child_data, sizeof(new_color_data)) == 0);
-	
-	color_data = tmp;
-
-	assert(color_data == tmp);
-	assert(std::memcmp(color_data, position_branch.child_data, sizeof(new_color_data)) == 0);
-	assert(position_branch.size == sizeof(new_color_data));
-
-	btl::branch<btl::branch<void, color>, ben::str120> color_branch(&position_branch, string_data);
-	ben::str120 new_string;
-	string_data = color_branch.add_child(&new_string);
-
-	assert(string_data == color_branch.child_data);
-	
-	free(position_data);
-	free(color_data);
-	free(string_data);
+	struct tree_sizes
+	{
+		const u64 vec3 = sizeof(vec3);
+		const u64 color = sizeof(color);
+		const u64 str = sizeof(ben::str120);
+	};
+	btl::tree<tree_sizes, 3> tree;
 	
 	return 0;
 }

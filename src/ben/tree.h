@@ -5,70 +5,95 @@
 
 namespace btl
 {
-	// btl::branch points to parent branch node and to child DATA. i dont think this makes
-	// sense and needs to be reworked to be useful most likely.
+	// btl::branch points to parent branch as well as maintaining it's index within the
+	// layer and amount of children branches it points to
+	//
 	template <typename parent_t, typename child_t>
 	struct branch
 	{
 		u64 index = 0;
 		u64 size = 0;
 		parent_t* parent = nullptr;
-		child_t* child_data = nullptr;
+		child_t* children = nullptr;
 
-		branch(parent_t* parent, child_t* child_data);
-		~branch();
-		child_t* add_child(const child_t* new_child_data, u64 count = 1);
-		child_t* set_child(const child_t* new_child_data, u64 size = 1);
+		branch(parent_t* parent);
+		void add_branch_child(const child_t* new_children, u64 count = 1);
+		void set_branch_child(const child_t* new_children, u64 size = 1);
 	};
 
 	template <typename parent_t, typename child_t>
-	branch<parent_t, child_t>::branch(parent_t* parent, child_t* child_data)
-		: parent(parent), child_data(child_data)
+	branch<parent_t, child_t>::branch(parent_t* parent)
+		: parent(parent)
 	{}
 
 	template <typename parent_t, typename child_t>
-	branch<parent_t, child_t>::~branch()
-	{
-		parent = nullptr;
-		child_data = nullptr;
-	}
-
-	template <typename parent_t, typename child_t>
-	child_t* branch<parent_t, child_t>::add_child(const child_t* new_child_data, u64 count)
+	void branch<parent_t, child_t>::add_branch_child(const child_t* new_children, u64 count)
 	{
 		size += count;
 
-		child_t* allocation = btl::reallocate(child_data, size);
+		child_t* allocation = btl::reallocate(children, size);
 
 		if (!allocation)
 			return nullptr;//print something
 
-		child_data = allocation;
-		btl::memory_copy(child_data + size - count, new_child_data, count);
+		children = allocation;
+		btl::memory_copy(child_data + size - count, new_children, count);
 
-		return child_data;
+		return children;
 	}
 
 	template <typename parent_t, typename child_t>
-	child_t* branch<parent_t, child_t>::set_child(const child_t* new_child_data, u64 size)
+	void branch<parent_t, child_t>::set_branch_child(const child_t* new_children, u64 size)
 	{
 		this->size = size;
 
-		if (!new_child_data)
+		if (!new_children)
 		{
-			free(child_data);
-			child_data = nullptr;
+			free(children);
+			children = nullptr;
 			return nullptr;
 		}
 
-		child_t* allocation = btl::reallocate(child_data, size);
+		child_t* allocation = btl::reallocate(children, size);
 
 		if (!allocation)
 			return nullptr;//print something
 
-		child_data = allocation;
-		btl::memory_copy(child_data, new_child_data, size);
+		children = allocation;
+		btl::memory_copy(children, new_children, size);
 
-		return child_data;
+		return children;
+	}
+
+	// btl::layer maintains a pointer to its actual data and an allocation of conceptual
+	// btl::branch structs
+	//
+	// size is equal to number of data elements and conceptual elements
+	//
+	template <typename T, class parent_branch_t, class child_branch_t>
+	struct layer
+	{
+		u64 size = 0;
+		T* data = nullptr;
+		btl::branch<parent_branch_t, child_branch_t>* layer_ptr = nullptr;
+
+		void add(parent_branch_t* parent_branch_ptr, child_branch_t* child_branch_ptr);
+		void add_data(T* data, u64 data_size = 1)
+	};
+
+	template <typename T, class parent_branch_t, class child_branch_t>
+	void layer<T, parent_branch_t, child_branch_t>::add(parent_branch_t* parent_branch_ptr, child_branch_t* child_branch_ptr)
+	{
+		size++;
+		auto tmp_layer_ptr = btl::reallocate(layer_ptr, size);
+
+		if (!tmp_layer_ptr)
+			return;//print something
+
+		layer_ptr = tmp_layer_ptr;
+
+		btl::branch<parent_branch_t, child_branch_t> temp(parent_branch_ptr, child_branch_ptr);
+
+		btl::memory_copy(layer_ptr + size - 1, &temp);
 	}
 }

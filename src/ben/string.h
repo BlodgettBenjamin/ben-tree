@@ -1,6 +1,8 @@
 #pragma once
 #define _BEN_STRING
 
+#include <vcruntime_string.h>
+
 #include "type.h"
 
 namespace ben
