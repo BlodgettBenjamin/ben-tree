@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <cstdlib>
 #include <cstring>
 #include <stdio.h>
@@ -33,7 +34,7 @@ namespace btl
 		void** layers = nullptr;
 
 		tree();
-		inline u64 layer_count();
+		inline constexpr u64 layer_count();
 		void add(const u64* const layer_type_sizes, u8 layer_index, const void* data_ptr, u64 count = 1);
 	};
 
@@ -52,7 +53,7 @@ namespace btl
 	}
 
 	template <u64 layer_count_t>
-	inline u64 tree<layer_count_t>::layer_count()
+	inline constexpr u64 tree<layer_count_t>::layer_count()
 	{
 		return layer_count_t;
 	}
@@ -90,21 +91,39 @@ int main()
 	vec3 vector_data[] = { {1.0f, 2.5f, 4.5f}, {9.5f, 2.7f, 9.2f} };
 	tree.add(tree_sizes, tree_struct_layer::vec3, vector_data, 2);
 
-	for (u32 i = 0; i < tree.layer_count(); i++)
-	{
-		ben::print("layer #%u has a count of %u elements each sized %u bytes\n", i, tree.layer_sizes[i], tree_sizes[i]);
+	ben::stru64 info_buffer_vec3;
+	ben::stru64 info_buffer_color;
+	ben::stru64 info_buffer_str;
 
-		if (tree.layer_sizes[i] > 0)
-		{
-			const u8* const layer_byte_data_ptr = reinterpret_cast<u8*>(tree.layers[i]);
-			for (const u8* layer_byte_ptr = layer_byte_data_ptr;
-				layer_byte_ptr < layer_byte_data_ptr + tree.layer_sizes[i] * tree_sizes[i];
-				layer_byte_ptr++)
-			{
-				ben::print("byte#%hhu : %hhx\n", layer_byte_ptr - layer_byte_data_ptr, *layer_byte_ptr);
-			}
-		}
+	u32 layer_index;
+
+	layer_index = tree_struct_layer::vec3;
+	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", layer_index, tree.layer_sizes[layer_index], tree_sizes[layer_index]);
+	for (u64 i = 0; i < tree.layer_sizes[layer_index]; i++)
+	{
+		vec3* vector = (vec3*)(tree.layers[layer_index]) + i;
+		info_buffer_vec3.catf("{ %f, %f, %f }\n", vector->x, vector->y, vector->z);
 	}
+
+	layer_index = tree_struct_layer::color;
+	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", layer_index, tree.layer_sizes[layer_index], tree_sizes[layer_index]);
+	for (u64 i = 0; i < tree.layer_sizes[layer_index]; i++)
+	{
+		color* col = (color*)(tree.layers[layer_index]) + i;
+		info_buffer_color.catf("{ %f, %f, %f, %f }\n", col->r, col->g, col->b, col->a);
+	}
+
+	layer_index = tree_struct_layer::str;
+	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", layer_index, tree.layer_sizes[layer_index], tree_sizes[layer_index]);
+	for (u64 i = 0; i < tree.layer_sizes[layer_index]; i++)
+	{
+		ben::str120* string = (ben::str120*)(tree.layers[layer_index]) + i;
+		info_buffer_str.catf("{ %s }\n", string);
+	}
+
+	ben::print(info_buffer_vec3);
+	ben::print(info_buffer_color);
+	ben::print(info_buffer_str);
 	
 	return 0;
 }
