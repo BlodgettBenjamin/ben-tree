@@ -3,12 +3,12 @@
 #include <cstring>
 #include <stdio.h>
 #include <cassert>
-#include <type_traits>
 
 #include "ben/type.h"
 #include "ben/memory.h"
 #include "ben/string.h"
 #include "ben/io.h"
+#include "ben/parpack.h"
 //#include "ben/tree.h"
 
 
@@ -30,66 +30,41 @@ struct color
 
 namespace btl
 {
-	class pack
-	{
-	private:
-		template <class T, class ArgFinal>
-		static inline constexpr u64 index_rec(u64 t_index)
-		{
-			static_assert(std::is_same<T, ArgFinal>::value == true);
-			return t_index;
-		}
-
-		template <class T, class Start, class... PackArgs>
-		static inline constexpr u64 index_rec(u64 t_index)
-		{
-			if (std::is_same<T, Start>::value == true)
-				return t_index;
-
-			return pack::index_rec<T, PackArgs...>(t_index + 1);
-		}
-	public:
-		template <class T, class PackStart, class... PackArgs>
-		static inline constexpr u64 index()
-		{
-			if (std::is_same<T, PackStart>::value == true)
-				return 0;
-
-			return pack::index_rec<T, PackArgs...>(1);
-		}
-	};
-}
-
-namespace btl
-{
-	template <class T, class... Args>
+	template <class StartArgs, class... Args>
 	struct tree
 	{
 		u64 layer_sizes[1 + sizeof...(Args)] = { 0 };
 		void* layers[1 + sizeof...(Args)] = { 0 };
 
 		tree() = default;
-		inline constexpr u64 layer_count();
-		template <class ArgT> void add(const ArgT* data_ptr, u64 count = 1);
+		inline constexpr u64 layer_count() const;
+		template <class T> constexpr u64 find_layer(const T& const) const;
+		template <class T> void add(const T* data_ptr, u64 count = 1);
 	};
 
-	template <class T, class... Args>
-	inline constexpr u64 tree<T, Args...>::layer_count()
+	template <class StartArgs, class... Args>
+	inline constexpr u64 tree<StartArgs, Args...>::layer_count() const
 	{
 		return 1 + sizeof...(Args);
 	}
 
-	template <class T, class... Args>
-	template <class ArgT> void tree<T, Args...>::add(const ArgT* data_ptr, u64 count)
+	template <class StartArgs, class... Args>
+	template <class T> constexpr u64 tree<StartArgs, Args...>::find_layer(const T& const) const
 	{
-		u64 arg_index = btl::pack::index<ArgT, T, Args...>();
+		return btl::pack::index<T, StartArgs, Args...>::value;
+	}
+
+	template <class StartArgs, class... Args>
+	template <class T> void tree<StartArgs, Args...>::add(const T* data_ptr, u64 count)
+	{
+		u64 arg_index = find_layer(*data_ptr);
 		layer_sizes[arg_index] += count;
-		auto realloc_result = realloc(layers[arg_index], sizeof(ArgT) * layer_sizes[arg_index]);
+		auto realloc_result = realloc(layers[arg_index], sizeof(T) * layer_sizes[arg_index]);
 		assert(realloc_result);
 
 		layers[arg_index] = realloc_result;
 
-		auto cpy_result = memcpy((ArgT*)(layers[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(ArgT) * count);
+		auto cpy_result = memcpy((T*)(layers[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(T) * count);
 		assert(cpy_result);
 	}
 }
