@@ -33,7 +33,7 @@ namespace btl
 
 		child_t* allocation = btl::reallocate(children, size);
 
-		if (!allocation)
+		if (allocation == nullptr)
 			return nullptr;//print something
 
 		children = allocation;
@@ -47,7 +47,7 @@ namespace btl
 	{
 		this->size = size;
 
-		if (!new_children)
+		if (new_children == nullptr)
 		{
 			free(children);
 			children = nullptr;
@@ -56,7 +56,7 @@ namespace btl
 
 		child_t* allocation = btl::reallocate(children, size);
 
-		if (!allocation)
+		if (allocation == nullptr)
 			return nullptr;//print something
 
 		children = allocation;
@@ -87,7 +87,7 @@ namespace btl
 		size++;
 		auto tmp_layer_ptr = btl::reallocate(layer_ptr, size);
 
-		if (!tmp_layer_ptr)
+		if (tmp_layer_ptr == nullptr)
 			return;//print something
 
 		layer_ptr = tmp_layer_ptr;

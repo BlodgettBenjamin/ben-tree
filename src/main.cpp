@@ -27,29 +27,28 @@ struct color
 
 namespace btl
 {
-	template <u64 layer_count_t>
+	template <const u64 layer_count_t>
 	struct tree
 	{
-		u64* layer_sizes = nullptr;
-		void** layers = nullptr;
+		u64 layer_type_sizes[layer_count_t] = { 0 };
+		u64 layer_sizes[layer_count_t] = { 0 };
+		void* layers[layer_count_t] = { 0 };
 
-		tree();
+		tree(const u64* layer_type_sizes_data);
 		inline constexpr u64 layer_count();
 		void add(const u64* const layer_type_sizes, u8 layer_index, const void* data_ptr, u64 count = 1);
 	};
 
 	template <u64 layer_count_t>
-	tree<layer_count_t>::tree()
+	tree<layer_count_t>::tree(const u64* layer_type_sizes_data)
 	{
-		layer_sizes = (u64*)calloc(layer_count_t, sizeof(u64));
-		
-		if (!layer_sizes)
-			return;//complain
+		static_assert(layer_count_t);
 
-		layers = (void**)calloc(layer_count_t, sizeof(void*));
+		assert(memcmp(this, reinterpret_cast<u8*>(this) + sizeof(tree<layer_count_t>) / 2, sizeof(tree<layer_count_t>) / 2) == 0);
+		assert(layer_type_sizes_data);
 
-		if (!layers)
-			return;//complain
+		auto tmp = memcpy(layer_type_sizes, layer_type_sizes_data, layer_count_t);
+		assert(tmp);
 	}
 
 	template <u64 layer_count_t>
@@ -63,16 +62,12 @@ namespace btl
 	{
 		layer_sizes[layer_index] += count;
 		auto realloc_result = realloc(layers[layer_index], layer_type_sizes[layer_index] * (layer_sizes[layer_index]));
-
-		if (!realloc_result)
-			return;//complain
+		assert(realloc_result);
 
 		layers[layer_index] = realloc_result;
 
 		auto cpy_result = memcpy((u8*)(layers[layer_index]) + (layer_sizes[layer_index] - count) * layer_type_sizes[layer_index], data_ptr, count * layer_type_sizes[layer_index]);
-		
-		if (!cpy_result)
-			return;//complain
+		assert(cpy_result);
 	}
 }
 
@@ -85,8 +80,9 @@ namespace tree_struct_layer
 }
 int main()
 {
+
 	u64 tree_sizes[] = { sizeof(vec3), sizeof(color), sizeof(ben::str120) };
-	btl::tree<3> tree;
+	btl::tree<sizeof(tree_sizes)> tree(tree_sizes);
 
 	vec3 vector_data[] = { {1.0f, 2.5f, 4.5f}, {9.5f, 2.7f, 9.2f} };
 	tree.add(tree_sizes, tree_struct_layer::vec3, vector_data, 2);
@@ -102,7 +98,7 @@ int main()
 	for (u64 i = 0; i < tree.layer_sizes[layer_index]; i++)
 	{
 		vec3* vector = (vec3*)(tree.layers[layer_index]) + i;
-		info_buffer_vec3.catf("{ %f, %f, %f }\n", vector->x, vector->y, vector->z);
+		info_buffer_vec3.catf("{ %.1f, %.1f, %.1f }\n", vector->x, vector->y, vector->z);
 	}
 
 	layer_index = tree_struct_layer::color;
@@ -110,7 +106,7 @@ int main()
 	for (u64 i = 0; i < tree.layer_sizes[layer_index]; i++)
 	{
 		color* col = (color*)(tree.layers[layer_index]) + i;
-		info_buffer_color.catf("{ %f, %f, %f, %f }\n", col->r, col->g, col->b, col->a);
+		info_buffer_color.catf("{ %.1f, %.1f, %.1f, %.1f }\n", col->r, col->g, col->b, col->a);
 	}
 
 	layer_index = tree_struct_layer::str;

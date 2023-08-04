@@ -13,7 +13,7 @@ inline T* btl::reallocate(T* ptr, u64 new_count)
 {
 	T* tmp_ptr = (T*)realloc(ptr, sizeof(T) * new_count);
 
-	if (!tmp_ptr)
+	if (tmp_ptr == nullptr)
 		return nullptr;//print something
 
 	ptr = tmp_ptr;
@@ -24,6 +24,6 @@ inline T* btl::reallocate(T* ptr, u64 new_count)
 template <typename T>
 inline void btl::memory_copy(T* dst_ptr, const T* src_ptr, u64 count_t)
 {
-	if (!memcpy(dst_ptr, src_ptr, sizeof(T) * count_t))
+	if (memcpy(dst_ptr, src_ptr, sizeof(T) * count_t) == nullptr)
 		return;//cry
 }

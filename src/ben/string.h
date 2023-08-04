@@ -48,6 +48,7 @@ namespace ben
 
 	u8& str120::operator[](u8 index)
 	{
+		assert(index < length);
 		return buffer[index];
 	}
 
@@ -81,18 +82,23 @@ namespace ben
 
 	stru64::stru64(const char* str)
 	{
+		assert(buffer);
 		buffer_size = length = strlen((char*)buffer) + 1;
 		buffer = (u8*)calloc(length, sizeof(u8));
-		assert(buffer != nullptr);
-		assert(strcpy((char*)buffer, str) != nullptr);
+		assert(buffer);
+		strcpy((char*)buffer, str);
+		assert(buffer);
 	}
 
 	stru64& stru64::operator=(const char* str)
 	{
 		buffer_size = length = strlen(str) + 1;
-		buffer = (u8*)realloc(buffer, length);
+		auto ptr = realloc(buffer, length);
+		assert(ptr);
+		buffer = (u8*)ptr;
 		assert(buffer != nullptr);
-		assert(strcpy((char*)buffer, str) != nullptr);
+		strcpy((char*)buffer, str);
+		assert(buffer);
 
 		return *this;
 	}
@@ -133,11 +139,15 @@ namespace ben
 			length += strlen((char*)temp_buffer);
 			if (buffer_size < length)
 			{
-				buffer_size = (u64)(length * 1.5f);
-				buffer = (u8*)realloc(buffer, buffer_size);
-				assert(buffer != nullptr);
+				buffer_size = (u64)(length * 1.5);
+				auto ptr = realloc(buffer, buffer_size);
+				assert(ptr);
+				buffer = (u8*)ptr;
+				assert(buffer);
 			}
-			assert(strcat((char*)buffer, (char*)temp_buffer) != nullptr);
+
+			strcat((char*)buffer, (char*)temp_buffer);
+			assert(buffer);
 		}
 
 		return done;
