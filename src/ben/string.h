@@ -131,9 +131,12 @@ namespace ben
 		else
 		{
 			length += strlen((char*)temp_buffer);
-			buffer_size = (u64)(length * 1.5f);
-			buffer = (u8*)realloc(buffer, buffer_size);
-			assert(buffer != nullptr);
+			if (buffer_size < length)
+			{
+				buffer_size = (u64)(length * 1.5f);
+				buffer = (u8*)realloc(buffer, buffer_size);
+				assert(buffer != nullptr);
+			}
 			assert(strcat((char*)buffer, (char*)temp_buffer) != nullptr);
 		}
 
