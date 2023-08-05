@@ -2,6 +2,8 @@
 
 #include "type.h"
 
+#define BTL_COUNTOF(array) (sizeof(array) / sizeof(array[0]))
+
 namespace btl
 {
 	template <typename T> inline T* reallocate(T* ptr, u64 new_count);
@@ -12,7 +14,7 @@ template <typename T>
 inline T* btl::reallocate(T* ptr, u64 new_count)
 {
 	T* tmp_ptr = (T*)realloc(ptr, sizeof(T) * new_count);
-
+	
 	if (tmp_ptr == nullptr)
 		return nullptr;//print something
 
