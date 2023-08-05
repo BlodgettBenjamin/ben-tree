@@ -4,6 +4,10 @@
 
 #include "type.h"
 
+// x----------------------------------------------------------------------------------------------x
+// |   - parpack.h contains utility functionality for recursively unpacking parameter packs       |
+// x----------------------------------------------------------------------------------------------x
+//
 namespace btl
 {
 	class pack

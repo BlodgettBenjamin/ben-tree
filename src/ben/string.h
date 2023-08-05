@@ -9,10 +9,13 @@
 
 namespace ben
 {
-	// str120 is a stack allocated string of maximimum length 120
-	// the sizeof(str120) should always return 121
-	// it is both null terminated and stores its length
-	// the value pointer of str120 points to its buffer
+	// x----------------------------------------------------------------------------------------------x
+	// |   - str120 is a stack allocated string of maximimum length 120 the sizeof(str120) should     |
+	// |     always return 121                                                                        |
+	// |   - it is both null terminated and stores its length                                         |
+	// |   - the value pointer of str120 points to its buffer                                         |
+	// x----------------------------------------------------------------------------------------------x
+	// 
 	struct str120
 	{
 		static const u64 buffer_size = 120ui64;
@@ -62,8 +65,11 @@ namespace ben
 		return reinterpret_cast<const char*>(this);
 	}
 
-	// stru64 is a dynamic heap allocated string
-	// the buffer resizes according to a simple protocol of 1.5x the length
+	// x----------------------------------------------------------------------------------------------x
+	// |   - stru64 is a dynamic heap allocated string                                                |
+	// |   - the buffer resizes according to a simple protocol of 1.5x the length                     |
+	// x----------------------------------------------------------------------------------------------x
+	// 
 	struct stru64
 	{
 		u64 length = 0;
@@ -119,6 +125,15 @@ namespace ben
 		return (const char*)buffer;
 	}
 
+
+	// x----------------------------------------------------------------------------------------------x
+	// |   - catf concatenates a dynamic ben::stru64 buffer                                           |
+	// |   - it takes advantage of ben::str120s fixed size and vsnprintf to ensure buffer overflow    |
+	// |     does not occur                                                                           |
+	// |   - int the future it should call a btl::function for formatting strings that uses parame-   |
+	// |     ter packs and the assert for temp_buffer should be a part of ben::str120 functionality   |
+	// x----------------------------------------------------------------------------------------------x
+	//
 	i32 stru64::catf(const char* format, ...)
 	{
 		va_list arg;

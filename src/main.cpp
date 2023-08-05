@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <cassert>
 
+#include "ben/comment.h"
 #include "ben/type.h"
 #include "ben/memory.h"
 #include "ben/string.h"
@@ -28,26 +29,6 @@ struct color
 
 namespace btl
 {
-	template <class tree, typename T>
-	class tree_iterator
-	{
-	public:
-		tree_iterator(T* layer_ptr)
-			: ptr(layer_ptr)
-		{};
-		tree_iterator& operator++() { ptr++; return *this; }
-		tree_iterator operator++(i32) { tree_iterator it = *this; ++(*this); return it; }
-		tree_iterator& operator--() { ptr--; return *this; }
-		tree_iterator operator--(i32) { tree_iterator it = *this; --(*this); return it; }
-		T& operator[](i32 index) { return *(ptr + index); }
-		T* operator->() { return ptr; }
-		T& operator*() { return *ptr; }
-		bool operator==(const tree_iterator& other) const { return ptr == other.ptr; }
-		bool operator!=(const tree_iterator& other) const { return ptr != other.ptr; }
-	private:
-		T* ptr = nullptr;
-	};
-
 	template <class StartArgs, class... Args>
 	class tree
 	{
@@ -81,25 +62,78 @@ namespace btl
 		assert(cpy_result);
 	}
 
-	template <typename T, class tree_t>
-	struct iterable
+	namespace layer
 	{
-		T* const p0;
-		T* const p1;
 
-		iterable(T* data_ptr, T* data_ptr_end)
-			: p0(data_ptr), p1(data_ptr_end)
-		{};
+		// x----------------------------------------------------------------------------------------------x
+		// |   - btl::layer::iterator iterates the flat allocations of btl::tree                          |
+		// |   - use of btl::make_iterable() is necessary for range based for loops                       |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		template <class tree, typename T>
+		class iterator
+		{
+		public:
+			iterator(T* layer_ptr)
+				: ptr(layer_ptr)
+			{};
+			iterator& operator++() { ptr++; return *this; }
+			iterator operator++(i32) { iterator it = *this; ++(*this); return it; }
+			iterator& operator--() { ptr--; return *this; }
+			iterator operator--(i32) { iterator it = *this; --(*this); return it; }
+			T& operator[](i32 index) { return *(ptr + index); }
+			T* operator->() { return ptr; }
+			T& operator*() { return *ptr; }
+			bool operator==(const iterator& other) const { return ptr == other.ptr; }
+			bool operator!=(const iterator& other) const { return ptr != other.ptr; }
+		private:
+			T* ptr = nullptr;
+		};
 
-		tree_iterator<tree_t, T> begin() { return tree_iterator<tree_t, T>(p0); }
-		tree_iterator<tree_t, T> end() { return tree_iterator<tree_t, T>(p1); }
-	};
+		// x----------------------------------------------------------------------------------------------x
+		// |   - btl::layer::iterable is necessary for btl::make_iterable to work nicely with btl::tree   |
+		// |   - btl::tree does not implement an iterator but this will likely change in the future       |
+		// x----------------------------------------------------------------------------------------------x
+		// |   - don't try to declare a type of btl::layer::iterable                                      |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		template <typename T, class tree_t>
+		struct iterable
+		{
+			T* const p0;
+			T* const p1;
 
-	template <typename T, class tree_t>
-	iterable<T, tree_t> make_iterable(tree_t* tree)
-	{
-		return iterable<T, tree_t>(tree->ptr<T>(), tree->ptr<T>() + tree->size<T>());
+			iterable(T* data_ptr, T* data_ptr_end)
+				: p0(data_ptr), p1(data_ptr_end)
+			{};
+
+			layer::iterator<tree_t, T> begin() { return layer::iterator<tree_t, T>(p0); }
+			layer::iterator<tree_t, T> end() { return layer::iterator<tree_t, T>(p1); }
+		};
 	}
+
+	// x----------------------------------------------------------------------------------------------x
+	// |   -  btl::make_iterable is currently used for making btl::tree work with range based for     |
+	// |      loops                                                                                   |
+	// |   -  it could be implemented for types other than btl::tree in the future but                |
+	// |      disambiguation will make its use a bit more cumbersome                                  |
+	// x----------------------------------------------------------------------------------------------x
+	// |   EXAMPLE USAGE :                                                                            |
+	// x----------------------------------------------------------------------------------------------x
+	// |         for (const auto& vector : btl::make_iterable<vec3>(&tree)                            |
+	// |                                    or                                                        |
+	// |         for (const vec3& vector : btl::make_iterable<vec3>(&tree)                            |
+	// |                                                                                              |
+	// |                                   never                                                      |
+	// |         for (iterable<vec3, tree<>> vector : btl::make_iterable<vec3>(&tree)                 |
+	// x----------------------------------------------------------------------------------------------x
+	//
+	template <typename T, class tree_t>
+	layer::iterable<T, tree_t> make_iterable(tree_t* tree)
+	{
+		return layer::iterable<T, tree_t>(tree->ptr<T>(), tree->ptr<T>() + tree->size<T>());
+	}
+
 }
 
 namespace tree_struct_layer
@@ -111,8 +145,7 @@ namespace tree_struct_layer
 }
 int main()
 {
-	using tree_t = btl::tree<vec3, color, ben::str120>;
-	tree_t tree;
+	btl::tree<vec3, color, ben::str120> tree;
 
 	vec3 vector_data[] = {
 		{1.0f, 2.5f, 4.5f}, {9.5f, 2.7f, 9.2f}

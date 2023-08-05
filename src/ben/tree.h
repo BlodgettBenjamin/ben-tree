@@ -5,8 +5,10 @@
 
 namespace btl
 {
-	// btl::branch points to parent branch as well as maintaining it's index within the
-	// layer and amount of children branches it points to
+	// x----------------------------------------------------------------------------------------------x
+	// |   - btl::branch points to parent branch as well as maintaining it's index within the layer   |
+	// |     and amount of children branches it points to                                             |
+	// x----------------------------------------------------------------------------------------------x
 	//
 	template <typename parent_t, typename child_t>
 	struct branch
@@ -65,10 +67,11 @@ namespace btl
 		return children;
 	}
 
-	// btl::layer maintains a pointer to its actual data and an allocation of conceptual
-	// btl::branch structs
-	//
-	// size is equal to number of data elements and conceptual elements
+	// x----------------------------------------------------------------------------------------------x
+	// |   - btl::layer maintains a pointer to its actual data and an allocation of conceptual btl-   |
+	// |     ::branch structs                                                                         |
+	// |   - size is equal to number of data elements and conceptual elements                         |
+	// x----------------------------------------------------------------------------------------------x
 	//
 	template <typename T, class parent_branch_t, class child_branch_t>
 	struct layer
