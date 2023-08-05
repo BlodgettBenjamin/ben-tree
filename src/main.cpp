@@ -35,48 +35,15 @@ namespace btl
 		tree_iterator(T* layer_ptr)
 			: ptr(layer_ptr)
 		{};
-		tree_iterator& operator++()
-		{
-			ptr++;
-			return *this;
-		}
-		tree_iterator operator++(i32)
-		{
-			tree_iterator it = *this;
-			++(*this);
-			return it;
-		}
-		tree_iterator& operator--()
-		{
-			ptr--;
-			return *this;
-		}
-		tree_iterator operator--(i32)
-		{
-			tree_iterator it = *this;
-			--(*this);
-			return it;
-		}
-		T& operator[](i32 index)
-		{
-			return *(ptr + index);
-		}
-		T* operator->()
-		{
-			return ptr;
-		}
-		T& operator*()
-		{
-			return *ptr;
-		}
-		bool operator==(const tree_iterator& other) const
-		{
-			return ptr == other.ptr;
-		}
-		bool operator!=(const tree_iterator& other) const
-		{
-			return ptr != other.ptr;
-		}
+		tree_iterator& operator++() { ptr++; return *this; }
+		tree_iterator operator++(i32) { tree_iterator it = *this; ++(*this); return it; }
+		tree_iterator& operator--() { ptr--; return *this; }
+		tree_iterator operator--(i32) { tree_iterator it = *this; --(*this); return it; }
+		T& operator[](i32 index) { return *(ptr + index); }
+		T* operator->() { return ptr; }
+		T& operator*() { return *ptr; }
+		bool operator==(const tree_iterator& other) const { return ptr == other.ptr; }
+		bool operator!=(const tree_iterator& other) const { return ptr != other.ptr; }
 	private:
 		T* ptr = nullptr;
 	};
@@ -88,7 +55,8 @@ namespace btl
 		u64 layer_sizes[1 + sizeof...(Args)] = { 0 };
 		void* layers[1 + sizeof...(Args)] = { 0 };
 	public:
-		template <class T> struct layer { 
+		template <class T> struct layer
+		{
 			static constexpr u64 const index = btl::pack::index<T, StartArgs, Args...>::value;
 			static constexpr u64 const count = 1 + sizeof...(Args);
 		};
@@ -97,22 +65,7 @@ namespace btl
 
 		tree() = default;
 		template <class T> void add(const T* data_ptr, u64 count = 1);
-
-		template <class T> tree_iterator<tree<StartArgs, Args...>, T> begin();
-		template <class T> tree_iterator<tree<StartArgs, Args...>, T> end();
 	};
-	
-	template <class StartArgs, class... Args>
-	template <class T> tree_iterator<tree<StartArgs, Args...>, T> tree<StartArgs, Args...>::begin()
-	{
-		return tree_iterator<tree<StartArgs, Args...>, T>(ptr<T>());
-	}
-
-	template <class StartArgs, class... Args>
-	template <class T> tree_iterator<tree<StartArgs, Args...>, T> tree<StartArgs, Args...>::end()
-	{
-		return tree_iterator<tree<StartArgs, Args...>, T>(ptr<T>() + size<T>());
-	}
 
 	template <class StartArgs, class... Args>
 	template <class T> void tree<StartArgs, Args...>::add(const T* data_ptr, u64 count)
@@ -126,6 +79,26 @@ namespace btl
 
 		auto cpy_result = memcpy((T*)(layers[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(T) * count);
 		assert(cpy_result);
+	}
+
+	template <typename T, class tree_t>
+	struct iterable
+	{
+		T* const p0;
+		T* const p1;
+
+		iterable(T* data_ptr, T* data_ptr_end)
+			: p0(data_ptr), p1(data_ptr_end)
+		{};
+
+		tree_iterator<tree_t, T> begin() { return tree_iterator<tree_t, T>(p0); }
+		tree_iterator<tree_t, T> end() { return tree_iterator<tree_t, T>(p1); }
+	};
+
+	template <typename T, class tree_t>
+	iterable<T, tree_t> make_iterable(tree_t* tree)
+	{
+		return iterable<T, tree_t>(tree->ptr<T>(), tree->ptr<T>() + tree->size<T>());
 	}
 }
 
@@ -158,28 +131,17 @@ int main()
 	ben::stru64 info_buffer_color;
 	ben::stru64 info_buffer_str;
 
-	u32 layer_index;
+	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree_struct_layer::vec3, tree.size<vec3>(), sizeof(vec3));
+	for (const auto& vector : btl::make_iterable<vec3>(&tree))
+		info_buffer_vec3.catf("{ %.1f, %.1f, %.1f }\n", vector.x, vector.y, vector.z);
 
-	layer_index = tree_struct_layer::vec3;
-	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", layer_index, tree.size<vec3>(), sizeof(vec3));
-	for (btl::tree_iterator<tree_t, vec3> it = tree.begin<vec3>(); it != tree.end<vec3>(); it++)
-	{
-		info_buffer_vec3.catf("{ %.1f, %.1f, %.1f }\n", it->x, it->y, it->z);
-	}
+	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree_struct_layer::color, tree.size<color>(), sizeof(color));
+	for (const auto& color : btl::make_iterable<color>(&tree))
+		info_buffer_color.catf("{ %.1f, %.1f, %.1f, %.1f }\n", color.r, color.g, color.b, color.a);
 
-	layer_index = tree_struct_layer::color;
-	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", layer_index, tree.size<color>(), sizeof(color));
-	for (btl::tree_iterator<tree_t, color> it = tree.begin<color>(); it != tree.end<color>(); it++)
-	{
-		info_buffer_color.catf("{ %.1f, %.1f, %.1f, %.1f }\n", it->r, it->g, it->b, it->a);
-	}
-
-	layer_index = tree_struct_layer::str;
-	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", layer_index, tree.size<ben::str120>(), sizeof(ben::str120));
-	for (btl::tree_iterator<tree_t, ben::str120> it = tree.begin<ben::str120>(); it != tree.end<ben::str120>(); it++)
-	{
-		info_buffer_str.catf("{ %s }\n", *it);
-	}
+	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree_struct_layer::str, tree.size<ben::str120>(), sizeof(ben::str120));
+	for (const auto& str : btl::make_iterable<ben::str120>(&tree))
+		info_buffer_str.catf("{ %s }\n", str);
 
 	ben::print(info_buffer_vec3);
 	ben::print(info_buffer_color);
