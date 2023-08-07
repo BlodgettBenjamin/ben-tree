@@ -195,21 +195,26 @@ int main()
 	u64 count, index;
 	ben::str120 is_set;
 
-	count = btl::pack<obama, poop, gaming>::count;
-	index = btl::pack<obama, poop, gaming>::index<obama>;
-	is_set = btl::pack<obama, poop, gaming>::is_set ? "true" : "false";
-	ben::printf("\n<obama, poop, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
-	count = btl::pack<poop, obama, obama>::count;
-	index = btl::pack<poop, obama, obama>::index<obama>;
-	is_set = btl::pack<poop, obama, obama>::is_set ? "true" : "false";
+	using pog = btl::pack<poop, obama, gaming>;
+	using poo = btl::pack<poop, obama, obama>;
+	using pgpgpo = btl::pack<poop, gaming, poop, gaming, poop, obama>;
+	using gg = btl::pack<gaming, gaming>;
+
+	count  = pog::count;
+	index  = pog::index<obama>;
+	is_set = pog::is_set ? "true" : "false";
+	ben::printf("\n<poop, obama, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
+	count  = poo::count;
+	index  = poo::index<obama>;
+	is_set = poo::is_set ? "true" : "false";
 	ben::printf("<poop, obama, obama>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
-	count = btl::pack<poop, gaming, poop, gaming, poop, obama>::count;
-	index = btl::pack<poop, gaming, poop, gaming, poop, obama>::index<obama>;
-	is_set = btl::pack<poop, gaming, poop, gaming, poop, obama>::is_set ? "true" : "false";
+	count  = pgpgpo::count;
+	index  = pgpgpo::index<obama>;
+	is_set = pgpgpo::is_set ? "true" : "false";
 	ben::printf("<poop, gaming, poop, gaming, poop, obama>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
-	count = btl::pack<gaming, gaming>::count;
-	index = btl::pack<gaming, gaming>::index<obama>;
-	is_set = btl::pack<gaming, gaming>::is_set ? "true" : "false";
+	count  = gg::count;
+	index  = gg::index<obama>;
+	is_set = gg::is_set ? "true" : "false";
 	ben::printf("<gaming, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
 
 	return 0;
