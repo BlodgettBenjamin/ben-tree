@@ -43,17 +43,42 @@ namespace btl
 		};
 
 
-		template <class T, class NextArg, class... PackArgs>
+		template <class NextArg, class... PackArgs>
 		struct is_set_rec
 		{
 			static constexpr bool const value =
-				std::is_same<T, NextArg>::value ? false : is_set_rec<T, PackArgs...>::value;
+				contains_rec<NextArg, PackArgs...>::value ? false : is_set_rec<PackArgs...>::value;
 		};
-		template <class T, class ArgFinal>
-		struct is_set_rec<T, ArgFinal>
+		template <class ArgFinal>
+		struct is_set_rec<ArgFinal>
 		{
-			static constexpr bool const value =
-				std::is_same<T, ArgFinal>::value ? false : true;
+			static constexpr bool const value = true;
+		};
+
+		template <class NextArg, class... PackArgs>
+		struct triviality_rec
+		{
+			static constexpr u64 const value =
+				std::is_trivially_copyable<NextArg>::value + triviality_rec<PackArgs...>::value;
+		};
+		template <class ArgFinal>
+		struct triviality_rec<ArgFinal>
+		{
+			static constexpr u64 const value =
+				std::is_trivially_copyable<ArgFinal>::value ? 1 : 0;
+		};
+
+		template <class NextArg, class... PackArgs>
+		struct pointedness_rec
+		{
+			static constexpr u64 const value =
+				std::is_pointer<NextArg>::value + pointedness_rec<PackArgs...>::value;
+		};
+		template <class ArgFinal>
+		struct pointedness_rec<ArgFinal>
+		{
+			static constexpr u64 const value =
+				std::is_pointer<ArgFinal>::value ? 1 : 0;
 		};
 	public:
 		struct alias
@@ -65,6 +90,10 @@ namespace btl
 			using index = index_rec<0, T, StartArgs, Args...>;
 
 			using is_set = is_set_rec<StartArgs, Args...>;
+
+			using triviality = triviality_rec<StartArgs, Args...>;
+
+			using pointedness = pointedness_rec<StartArgs, Args...>;
 		};
 
 		template <class T>
@@ -76,5 +105,9 @@ namespace btl
 		static constexpr bool is_set = alias::is_set::value;
 
 		static constexpr u64 count = 1 + sizeof...(Args);
+
+		static constexpr u64 triviality = alias::triviality::value;
+
+		static constexpr u64 pointedness = alias::pointedness::value;
 	};
 }

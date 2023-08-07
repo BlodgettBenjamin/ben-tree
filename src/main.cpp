@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include <vector>
+
 #include "ben/comment.h"
 #include "ben/type.h"
 #include "ben/memory.h"
@@ -36,12 +38,12 @@ namespace btl
 		using pack_t = pack<StartArgs, Args...>;
 	public:
 		static constexpr u64 const count_t = pack_t::count;
-		template <class T> constexpr u64 index() const { return pack_t::alias::index<T>::value; };
-		template <class T> u64 size() const { return layer_sizes[index<T>()]; };
-		template <class T> T* ptr() { return reinterpret_cast<T*>(layer_data[index<T>()]); };
+		template <class LayerType> constexpr u64 index() const;
+		template <class LayerType> u64 size() const;
+		template <class LayerType> LayerType* ptr();
 
 		tree();
-		template <class T> void add(const T* data_ptr, u64 count = 1);
+		template <class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
 	private:
 		u64   layer_sizes[count_t]    = { 0 };
 		u64*  layer_branches[count_t] = { 0 };
@@ -49,9 +51,32 @@ namespace btl
 	};
 
 	template <class StartArgs, class... Args>
+	template <class LayerType> constexpr u64 tree<StartArgs, Args...>::index() const
+	{
+		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		return pack_t::alias::index<LayerType>::value;
+	}
+
+	template <class StartArgs, class... Args>
+	template <class LayerType> u64 tree<StartArgs, Args...>::size() const
+	{
+		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		return layer_sizes[index<LayerType>()];
+	}
+
+	template <class StartArgs, class... Args>
+	template <class LayerType> LayerType* tree<StartArgs, Args...>::ptr()
+	{
+		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		return reinterpret_cast<LayerType*>(layer_data[index<LayerType>()]);
+	}
+
+	template <class StartArgs, class... Args>
 	tree<StartArgs, Args...>::tree()
 	{
-		static_assert(count_t > 0);
+		static_assert(pack_t::is_set, "parameter pack cannot contain duplicates");
+		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
+		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
 
 		for (u64 l = 0; l < count_t; l++)
 		{
@@ -65,16 +90,16 @@ namespace btl
 	}
 
 	template <class StartArgs, class... Args>
-	template <class T> void tree<StartArgs, Args...>::add(const T* data_ptr, u64 count)
+	template <class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
 	{
-		u64 arg_index = index<T>();
+		u64 arg_index = index<LayerType>();
 		layer_sizes[arg_index] += count;
-		auto realloc_result = realloc(layer_data[arg_index], sizeof(T) * layer_sizes[arg_index]);
+		auto realloc_result = realloc(layer_data[arg_index], sizeof(LayerType) * layer_sizes[arg_index]);
 		assert(realloc_result);
 
 		layer_data[arg_index] = realloc_result;
 
-		auto cpy_result = memcpy((T*)(layer_data[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(T) * count);
+		auto cpy_result = memcpy((LayerType*)(layer_data[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(LayerType) * count);
 		assert(cpy_result);
 	}
 
@@ -86,24 +111,24 @@ namespace btl
 		// |   - use of btl::make_iterable() is necessary for range based for loops                       |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <class tree, typename T>
+		template <class tree_t, typename LayerType>
 		class iterator
 		{
 		public:
-			iterator(T* layer_ptr)
+			iterator(LayerType* layer_ptr)
 				: ptr(layer_ptr)
 			{};
 			iterator& operator++() { ptr++; return *this; }
 			iterator operator++(i32) { iterator it = *this; ++(*this); return it; }
 			iterator& operator--() { ptr--; return *this; }
 			iterator operator--(i32) { iterator it = *this; --(*this); return it; }
-			T& operator[](i32 index) { return *(ptr + index); }
-			T* operator->() { return ptr; }
-			T& operator*() { return *ptr; }
+			LayerType& operator[](i32 index) { return *(ptr + index); }
+			LayerType* operator->() { return ptr; }
+			LayerType& operator*() { return *ptr; }
 			bool operator==(const iterator& other) const { return ptr == other.ptr; }
 			bool operator!=(const iterator& other) const { return ptr != other.ptr; }
 		private:
-			T* ptr = nullptr;
+			LayerType* ptr = nullptr;
 		};
 
 		// x----------------------------------------------------------------------------------------------x
@@ -113,19 +138,19 @@ namespace btl
 		// |   - don't try to declare a type of btl::layer::iterable                                      |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <typename T, class tree_t>
+		template <typename LayerType, class tree_t>
 		class iterable
 		{
 		public:
-			iterable(T* data_ptr, T* data_ptr_end)
+			iterable(LayerType* data_ptr, LayerType* data_ptr_end)
 				: p0(data_ptr), p1(data_ptr_end)
 			{};
 
-			layer::iterator<tree_t, T> begin() { return layer::iterator<tree_t, T>(p0); }
-			layer::iterator<tree_t, T> end() { return layer::iterator<tree_t, T>(p1); }
+			layer::iterator<tree_t, LayerType> begin() { return layer::iterator<tree_t, LayerType>(p0); }
+			layer::iterator<tree_t, LayerType> end() { return layer::iterator<tree_t, LayerType>(p1); }
 		private:
-			T* const p0;
-			T* const p1;
+			LayerType* const p0;
+			LayerType* const p1;
 		};
 	}
 
@@ -145,10 +170,10 @@ namespace btl
 	// |         for (iterable<vec3, tree<>> vector : btl::make_iterable<vec3>(&tree)                 |
 	// x----------------------------------------------------------------------------------------------x
 	//
-	template <typename T, class tree_t>
-	layer::iterable<T, tree_t> make_iterable(tree_t* tree)
+	template <typename LayerType, class tree_t>
+	layer::iterable<LayerType, tree_t> make_iterable(tree_t* tree)
 	{
-		return layer::iterable<T, tree_t>(tree->ptr<T>(), tree->ptr<T>() + tree->size<T>());
+		return layer::iterable<LayerType, tree_t>(tree->ptr<LayerType>(), tree->ptr<LayerType>() + tree->size<LayerType>());
 	}
 }
 
@@ -216,6 +241,18 @@ int main()
 	index  = gg::index<obama>;
 	is_set = gg::is_set ? "true" : "false";
 	ben::printf("<gaming, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
+
+	btl::tree<vec3, color, ben::str120> good_tree;
+	//btl::tree<vec3, color, ben::str120*>            bad_tree; (no layers of pointers)
+	//btl::tree<vec3, color, ben::stru64>             bad_tree; (cant check for trivial serializeable at compile time so this will compile)
+	//btl::tree<vec3, color, std::vector<ben::str120> bad_tree; (std::vector is clearly not trivially copyable so this wont compile)
+	if (std::is_trivially_copyable<ben::stru64>::value)
+	{
+		ben::stru64 str0, str1;
+		str0.catf("A trivially copyable type is a type whose storage is contiguous");
+		memcpy(&str1, &str0, sizeof(ben::stru64));
+		assert(memcmp(&str1, &str0, sizeof(ben::stru64)) == 0);
+	}
 
 	return 0;
 }
