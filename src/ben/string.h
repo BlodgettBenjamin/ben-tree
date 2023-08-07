@@ -10,9 +10,10 @@
 namespace ben
 {
 	// x----------------------------------------------------------------------------------------------x
-	// |   - str120 is a stack allocated string of maximimum length 120 the sizeof(str120) should     |
-	// |     always return 121                                                                        |
+	// |   - str120 is a stack allocated string of maximimum length 120                               |
+	// |   - the sizeof(str120) should always return 121                                              |
 	// |   - it is both null terminated and stores its length                                         |
+	// x----------------------------------------------------------------------------------------------x
 	// |   - the value pointer of str120 points to its buffer                                         |
 	// x----------------------------------------------------------------------------------------------x
 	// 
@@ -130,8 +131,8 @@ namespace ben
 	// |   - catf concatenates a dynamic ben::stru64 buffer                                           |
 	// |   - it takes advantage of ben::str120s fixed size and vsnprintf to ensure buffer overflow    |
 	// |     does not occur                                                                           |
-	// |   - int the future it should call a btl::function for formatting strings that uses parame-   |
-	// |     ter packs and the assert for temp_buffer should be a part of ben::str120 functionality   |
+	// |   - in the future it should call a btl::function for formatting strings that uses paramet-   |
+	// |     er packs and the assert for temp_buffer should be a part of ben::str120 functionality    |
 	// x----------------------------------------------------------------------------------------------x
 	//
 	i32 stru64::catf(const char* format, ...)

@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdio.h>
-#include <cassert>
+#include <stdarg.h>
 
 #include "ben/comment.h"
 #include "ben/type.h"
@@ -32,33 +32,49 @@ namespace btl
 	template <class StartArgs, class... Args>
 	class tree
 	{
-	private:
-		u64 layer_sizes[1 + sizeof...(Args)] = { 0 };
-		void* layers[1 + sizeof...(Args)] = { 0 };
 	public:
-		template <class T> struct layer
-		{
-			static constexpr u64 const index = btl::pack::index<T, StartArgs, Args...>::value;
-			static constexpr u64 const count = 1 + sizeof...(Args);
-		};
-		template <class T> u64 size() { return layer_sizes[layer<T>::index]; };
-		template <class T> T* ptr() { return reinterpret_cast<T*>(layers[layer<T>::index]); };
+		using pack_t = pack<StartArgs, Args...>;
+	public:
+		static constexpr u64 const count_t = pack_t::count;
+		template <class T> constexpr u64 index() const { return pack_t::alias::index<T>::value; };
+		template <class T> u64 size() const { return layer_sizes[index<T>()]; };
+		template <class T> T* ptr() { return reinterpret_cast<T*>(layer_data[index<T>()]); };
 
-		tree() = default;
+		tree();
 		template <class T> void add(const T* data_ptr, u64 count = 1);
+	private:
+		u64   layer_sizes[count_t]    = { 0 };
+		u64*  layer_branches[count_t] = { 0 };
+		void* layer_data[count_t]     = { 0 };
 	};
+
+	template <class StartArgs, class... Args>
+	tree<StartArgs, Args...>::tree()
+	{
+		static_assert(count_t > 0);
+
+		for (u64 l = 0; l < count_t; l++)
+		{
+			auto calloc_result = calloc(1, sizeof(u64));
+			assert(calloc_result);
+
+			layer_branches[l] = (u64*)calloc_result;
+		}
+
+		//assert(memcmp());
+	}
 
 	template <class StartArgs, class... Args>
 	template <class T> void tree<StartArgs, Args...>::add(const T* data_ptr, u64 count)
 	{
-		u64 arg_index = layer<T>::index;
+		u64 arg_index = index<T>();
 		layer_sizes[arg_index] += count;
-		auto realloc_result = realloc(layers[arg_index], sizeof(T) * layer_sizes[arg_index]);
+		auto realloc_result = realloc(layer_data[arg_index], sizeof(T) * layer_sizes[arg_index]);
 		assert(realloc_result);
 
-		layers[arg_index] = realloc_result;
+		layer_data[arg_index] = realloc_result;
 
-		auto cpy_result = memcpy((T*)(layers[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(T) * count);
+		auto cpy_result = memcpy((T*)(layer_data[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(T) * count);
 		assert(cpy_result);
 	}
 
@@ -98,17 +114,18 @@ namespace btl
 		// x----------------------------------------------------------------------------------------------x
 		//
 		template <typename T, class tree_t>
-		struct iterable
+		class iterable
 		{
-			T* const p0;
-			T* const p1;
-
+		public:
 			iterable(T* data_ptr, T* data_ptr_end)
 				: p0(data_ptr), p1(data_ptr_end)
 			{};
 
 			layer::iterator<tree_t, T> begin() { return layer::iterator<tree_t, T>(p0); }
 			layer::iterator<tree_t, T> end() { return layer::iterator<tree_t, T>(p1); }
+		private:
+			T* const p0;
+			T* const p1;
 		};
 	}
 
@@ -133,16 +150,8 @@ namespace btl
 	{
 		return layer::iterable<T, tree_t>(tree->ptr<T>(), tree->ptr<T>() + tree->size<T>());
 	}
-
 }
 
-namespace tree_struct_layer
-{
-	enum tree_struct_layer : u8
-	{
-		vec3, color, str,
-	};
-}
 int main()
 {
 	btl::tree<vec3, color, ben::str120> tree;
@@ -164,21 +173,44 @@ int main()
 	ben::stru64 info_buffer_color;
 	ben::stru64 info_buffer_str;
 
-	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree_struct_layer::vec3, tree.size<vec3>(), sizeof(vec3));
+	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<vec3>(), tree.size<vec3>(), sizeof(vec3));
 	for (const auto& vector : btl::make_iterable<vec3>(&tree))
 		info_buffer_vec3.catf("{ %.1f, %.1f, %.1f }\n", vector.x, vector.y, vector.z);
 
-	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree_struct_layer::color, tree.size<color>(), sizeof(color));
+	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<color>(), tree.size<color>(), sizeof(color));
 	for (const auto& color : btl::make_iterable<color>(&tree))
 		info_buffer_color.catf("{ %.1f, %.1f, %.1f, %.1f }\n", color.r, color.g, color.b, color.a);
 
-	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree_struct_layer::str, tree.size<ben::str120>(), sizeof(ben::str120));
+	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<ben::str120>(), tree.size<ben::str120>(), sizeof(ben::str120));
 	for (const auto& str : btl::make_iterable<ben::str120>(&tree))
 		info_buffer_str.catf("{ %s }\n", str);
 
 	ben::print(info_buffer_vec3);
 	ben::print(info_buffer_color);
 	ben::print(info_buffer_str);
-	
+
+	struct obama {};
+	struct poop {};
+	struct gaming {};
+	u64 count, index;
+	ben::str120 is_set;
+
+	count = btl::pack<obama, poop, gaming>::count;
+	index = btl::pack<obama, poop, gaming>::index<obama>;
+	is_set = btl::pack<obama, poop, gaming>::is_set ? "true" : "false";
+	ben::printf("\n<obama, poop, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
+	count = btl::pack<poop, obama, obama>::count;
+	index = btl::pack<poop, obama, obama>::index<obama>;
+	is_set = btl::pack<poop, obama, obama>::is_set ? "true" : "false";
+	ben::printf("<poop, obama, obama>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
+	count = btl::pack<poop, gaming, poop, gaming, poop, obama>::count;
+	index = btl::pack<poop, gaming, poop, gaming, poop, obama>::index<obama>;
+	is_set = btl::pack<poop, gaming, poop, gaming, poop, obama>::is_set ? "true" : "false";
+	ben::printf("<poop, gaming, poop, gaming, poop, obama>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
+	count = btl::pack<gaming, gaming>::count;
+	index = btl::pack<gaming, gaming>::index<obama>;
+	is_set = btl::pack<gaming, gaming>::is_set ? "true" : "false";
+	ben::printf("<gaming, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
+
 	return 0;
 }
