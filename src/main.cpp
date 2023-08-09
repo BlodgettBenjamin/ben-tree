@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
 #include <cstdlib>
 #include <cstring>
 #include <stdio.h>
@@ -43,11 +43,23 @@ namespace btl
 		template <class LayerType> LayerType* ptr();
 
 		tree();
+		// x----------------------------------------------------------------------------------------------x
+		// |   - adds specified data to corresponding layer allocation                                    |
+		// |   - increments layer and branch sizes                                                        |
+		// |   - adds conceptual branch information to the same later (should be layer above?)            |
+		// x----------------------------------------------------------------------------------------------x
+		//
 		template <class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
 	private:
-		u64   layer_sizes[count_t]    = { 0 };
-		u64*  layer_branches[count_t] = { 0 };
-		void* layer_data[count_t]     = { 0 };
+		u64   layer_sizes[count_t]            = { 0 };
+		// x----------------------------------------------------------------------------------------------x
+		// |   - layer_branch_sizes is likely the exact same as layer_sizes, further experimentation is   |
+		// |     needed                                                                                   |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		u64   layer_branch_sizes[count_t - 1] = { 0 };
+		void* layer_data[count_t]             = { 0 };
+		u64*  layer_branches[count_t - 1]     = { 0 };
 	};
 
 	template <class StartArgs, class... Args>
@@ -78,29 +90,40 @@ namespace btl
 		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
 
-		for (u64 l = 0; l < count_t; l++)
-		{
-			auto calloc_result = calloc(1, sizeof(u64));
-			assert(calloc_result);
-
-			layer_branches[l] = (u64*)calloc_result;
-		}
-
-		//assert(memcmp());
+		assert(memcmp(layer_branches, layer_branches + (count_t - 1) / 2, (count_t - 1) / 2) == 0);
+		assert(memcmp(layer_branch_sizes, layer_branch_sizes + (count_t - 1) / 2, (count_t - 1) / 2) == 0);
 	}
+
 
 	template <class StartArgs, class... Args>
 	template <class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
 	{
-		u64 arg_index = index<LayerType>();
-		layer_sizes[arg_index] += count;
-		auto realloc_result = realloc(layer_data[arg_index], sizeof(LayerType) * layer_sizes[arg_index]);
-		assert(realloc_result);
+		const constexpr u64 i = pack_t::alias::contains<LayerType>::value;
+		const u64& new_type_count = layer_sizes[i] += count;
+		void*& data_allocation_ptr = layer_data[i];
 
-		layer_data[arg_index] = realloc_result;
+		void* data_realloc_ptr = realloc(data_allocation_ptr, sizeof(LayerType) * new_type_count);
+		assert(data_realloc_ptr);
 
-		auto cpy_result = memcpy((LayerType*)(layer_data[arg_index]) + layer_sizes[arg_index] - count, data_ptr, sizeof(LayerType) * count);
-		assert(cpy_result);
+		data_allocation_ptr = data_realloc_ptr;
+
+		void* data_copy_result = memcpy(reinterpret_cast<LayerType*>(data_allocation_ptr) + new_type_count - count, data_ptr, sizeof(LayerType) * count);
+		assert(data_copy_result != nullptr);
+
+
+		u64*& child_branch_allocation_ptr = layer_branches[i];
+
+		u64* child_branch_realloc_ptr = (u64*)realloc(child_branch_allocation_ptr, sizeof(u64) * new_type_count);
+		assert(child_branch_realloc_ptr != nullptr);
+
+		child_branch_allocation_ptr = (u64*)child_branch_realloc_ptr;
+
+		u64& child_branches = *(child_branch_allocation_ptr + new_type_count);
+		child_branches = 0;
+
+
+		if (i > 0)
+			layer_branch_sizes[i]++;
 	}
 
 	namespace layer
