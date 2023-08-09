@@ -50,7 +50,7 @@ namespace ben
 	}
 	i32 print(ben::stru64 string)
 	{
-		return printf(string.buffer);
+		return printf(string);
 	}
 #	endif
 #endif

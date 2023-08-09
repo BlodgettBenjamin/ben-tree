@@ -12,14 +12,14 @@ namespace ben
 	// x----------------------------------------------------------------------------------------------x
 	// |   - str120 is a stack allocated string of maximimum length 120                               |
 	// |   - the sizeof(str120) should always return 120                                              |
+	// |   - does not require explicit conversion to c string (this should change in the future)      |
 	// x----------------------------------------------------------------------------------------------x
 	// |   - the value pointer of str120 points to its buffer                                         |
 	// x----------------------------------------------------------------------------------------------x
 	// 
-	struct str120
+	class str120
 	{
-		char buffer[120] = { 0 };
-
+	public:
 		str120() = default;
 		str120(const char* str);
 		str120& operator=(const char* str);
@@ -27,6 +27,8 @@ namespace ben
 		char& operator[](u8);
 		operator char* ();
 		operator const char* () const;
+	private:
+		char buffer[120] = { 0 };
 	};
 
 	str120::str120(const char* str)
@@ -66,22 +68,23 @@ namespace ben
 	// x----------------------------------------------------------------------------------------------x
 	// |   - stru64 is a dynamic heap allocated string                                                |
 	// |   - the buffer resizes according to a simple protocol of 1.5x the length                     |
+	// |   - requires explicit conversion to c string                                                 |
 	// x----------------------------------------------------------------------------------------------x
 	// 
-	struct stru64
+	class stru64
 	{
-		u64 length = 0;
-		u64 buffer_size = 0;
-		char* buffer = nullptr;
-
+	public:
 		stru64() = default;
 		stru64(const char* str);
 		stru64& operator=(const char* str);
 		char& operator[](u8);
 		explicit operator       char* ();
 		explicit operator const char* () const;
-
 		i32 catf(const char* format, ...);
+	private:
+		u64 length = 0;
+		u64 buffer_size = 0;
+		char* buffer = nullptr;
 	};
 
 	stru64::stru64(const char* str)
