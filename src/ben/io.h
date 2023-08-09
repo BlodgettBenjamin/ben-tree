@@ -46,11 +46,11 @@ namespace ben
 #	ifdef _BEN_STRING
 	i32 print(ben::str120 string)
 	{
-		return printf((const char*)string);
+		return printf(string);
 	}
 	i32 print(ben::stru64 string)
 	{
-		return printf((const char*)string);
+		return printf(string.buffer);
 	}
 #	endif
 #endif

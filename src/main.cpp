@@ -45,19 +45,14 @@ namespace btl
 		tree();
 		// x----------------------------------------------------------------------------------------------x
 		// |   - adds specified data to corresponding layer allocation                                    |
-		// |   - increments layer and branch sizes                                                        |
-		// |   - adds conceptual branch information to the same later (should be layer above?)            |
+		// |   - increments layer size                                                                    |
+		// |   - adds conceptual branch information to the "parent layer" above it                        |
 		// x----------------------------------------------------------------------------------------------x
 		//
 		template <class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
+		void runtime_validation() const;
 	private:
 		u64   layer_sizes[count_t]            = { 0 };
-		// x----------------------------------------------------------------------------------------------x
-		// |   - layer_branch_sizes is likely the exact same as layer_sizes, further experimentation is   |
-		// |     needed                                                                                   |
-		// x----------------------------------------------------------------------------------------------x
-		//
-		u64   layer_branch_sizes[count_t - 1] = { 0 };
 		void* layer_data[count_t]             = { 0 };
 		u64*  layer_branches[count_t - 1]     = { 0 };
 	};
@@ -89,41 +84,36 @@ namespace btl
 		static_assert(pack_t::is_set, "parameter pack cannot contain duplicates");
 		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
-
 		assert(memcmp(layer_branches, layer_branches + (count_t - 1) / 2, (count_t - 1) / 2) == 0);
-		assert(memcmp(layer_branch_sizes, layer_branch_sizes + (count_t - 1) / 2, (count_t - 1) / 2) == 0);
 	}
 
 
 	template <class StartArgs, class... Args>
 	template <class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
 	{
-		const constexpr u64 i = pack_t::alias::contains<LayerType>::value;
-		const u64& new_type_count = layer_sizes[i] += count;
+		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
+		layer_sizes[i] += count;
+		const u64& new_type_count = layer_sizes[i];
 		void*& data_allocation_ptr = layer_data[i];
 
-		void* data_realloc_ptr = realloc(data_allocation_ptr, sizeof(LayerType) * new_type_count);
-		assert(data_realloc_ptr);
+		void* data_realloc_ptr = realloc(data_allocation_ptr, sizeof(LayerType) * new_type_count);                             assert(data_realloc_ptr);
 
 		data_allocation_ptr = data_realloc_ptr;
 
 		void* data_copy_result = memcpy(reinterpret_cast<LayerType*>(data_allocation_ptr) + new_type_count - count, data_ptr, sizeof(LayerType) * count);
-		assert(data_copy_result != nullptr);
-
-
-		u64*& child_branch_allocation_ptr = layer_branches[i];
-
-		u64* child_branch_realloc_ptr = (u64*)realloc(child_branch_allocation_ptr, sizeof(u64) * new_type_count);
-		assert(child_branch_realloc_ptr != nullptr);
-
-		child_branch_allocation_ptr = (u64*)child_branch_realloc_ptr;
-
-		u64& child_branches = *(child_branch_allocation_ptr + new_type_count);
-		child_branches = 0;
-
-
+		                                                                                                                       assert(data_copy_result != nullptr);
 		if (i > 0)
-			layer_branch_sizes[i]++;
+		{
+			#pragma warning( push )
+			#pragma warning( disable : 6201 )
+			u64*& parent_layer_branches_ptr = layer_branches[i - 1];                                                           assert(i - 1 < BTL_COUNTOF(layer_branches));
+			u64* parent_layer_branches_realloc_ptr = (u64*)realloc(parent_layer_branches_ptr, sizeof(u64) * new_type_count);   assert(parent_layer_branches_realloc_ptr != nullptr);
+			parent_layer_branches_ptr = (u64*)parent_layer_branches_realloc_ptr;
+			u64& child_branches = *(parent_layer_branches_ptr + new_type_count);
+			child_branches = 0;
+			#pragma warning( pop )
+		}
 	}
 
 	namespace layer
@@ -248,21 +238,21 @@ int main()
 	using pgpgpo = btl::pack<poop, gaming, poop, gaming, poop, obama>;
 	using gg = btl::pack<gaming, gaming>;
 
-	count  = pog::count;
-	index  = pog::index<obama>;
-	is_set = pog::is_set ? "true" : "false";
+	count  = pog::count;                                                                                                       assert(count == 3);
+	index  = pog::index<obama>;                                                                                                assert(index == 1);
+	is_set = pog::is_set ? "true" : "false";                                                                                   assert(is_set == "true");
 	ben::printf("\n<poop, obama, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
-	count  = poo::count;
-	index  = poo::index<obama>;
-	is_set = poo::is_set ? "true" : "false";
+	count  = poo::count;                                                                                                       assert(count == 3);
+	index  = poo::index<obama>;                                                                                                assert(index == 1);
+	is_set = poo::is_set ? "true" : "false";                                                                                   assert(is_set == "false");
 	ben::printf("<poop, obama, obama>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
-	count  = pgpgpo::count;
-	index  = pgpgpo::index<obama>;
-	is_set = pgpgpo::is_set ? "true" : "false";
+	count  = pgpgpo::count;                                                                                                    assert(count == 6);
+	index  = pgpgpo::index<obama>;                                                                                             assert(index == 5);
+	is_set = pgpgpo::is_set ? "true" : "false";                                                                                assert(is_set == "false");
 	ben::printf("<poop, gaming, poop, gaming, poop, obama>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
-	count  = gg::count;
-	index  = gg::index<obama>;
-	is_set = gg::is_set ? "true" : "false";
+	count  = gg::count;                                                                                                        assert(count == 2);
+	index  = gg::index<obama>;                                                                                                 assert(index == -1);
+	is_set = gg::is_set ? "true" : "false";                                                                                    assert(is_set == "false");
 	ben::printf("<gaming, gaming>\nsize:%llu index of obama:%d is set?:%s\n\n", count, index, is_set);
 
 	btl::tree<vec3, color, ben::str120> good_tree;
@@ -273,8 +263,7 @@ int main()
 	{
 		ben::stru64 str0, str1;
 		str0.catf("A trivially copyable type is a type whose storage is contiguous");
-		memcpy(&str1, &str0, sizeof(ben::stru64));
-		assert(memcmp(&str1, &str0, sizeof(ben::stru64)) == 0);
+		memcpy(&str1, &str0, sizeof(ben::stru64));                                                                             assert(memcmp(&str1, &str0, sizeof(ben::stru64)) == 0);
 	}
 
 	return 0;

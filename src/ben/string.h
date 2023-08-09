@@ -11,48 +11,45 @@ namespace ben
 {
 	// x----------------------------------------------------------------------------------------------x
 	// |   - str120 is a stack allocated string of maximimum length 120                               |
-	// |   - the sizeof(str120) should always return 121                                              |
-	// |   - it is both null terminated and stores its length                                         |
+	// |   - the sizeof(str120) should always return 120                                              |
 	// x----------------------------------------------------------------------------------------------x
 	// |   - the value pointer of str120 points to its buffer                                         |
 	// x----------------------------------------------------------------------------------------------x
 	// 
 	struct str120
 	{
-		static const u64 buffer_size = 120ui64;
-		u8 buffer[buffer_size] = { 0 };
-		u8 length = 0;
+		char buffer[120] = { 0 };
 
 		str120() = default;
 		str120(const char* str);
 		str120& operator=(const char* str);
-		u8& operator[](u8);
-		explicit operator       char* ();
-		explicit operator const char* () const;
+		bool operator==(const char* other) const;
+		char& operator[](u8);
+		operator char* ();
+		operator const char* () const;
 	};
 
 	str120::str120(const char* str)
 	{
-		length = (u8)strlen(str) + 1;
-		assert(length <= buffer_size);
-
-		strcpy((char*)this, str);
+		u8 length = (u8)strlen(str) + 1;                       assert(length <= 120);
+		                                                       assert(str != nullptr);
+		strcpy(buffer, str);                                   assert(buffer != nullptr);
 	}
 
 	str120& str120::operator=(const char* str)
-	{
-		length = (u8)strlen(str) + 1;
-		assert(length <= buffer_size);
-
-		memset(this, 0, buffer_size);
-		strcpy((char*)this, str);
-
+	{                                                          assert(strlen(str) + 1 <= 120);
+		memset(buffer, 0, 120);
+		strcpy(buffer, str);
 		return *this;
 	}
 
-	u8& str120::operator[](u8 index)
+	bool str120::operator==(const char* str) const
 	{
-		assert(index < length);
+		return strcmp(buffer, str) == 0;
+	}
+
+	char& str120::operator[](u8 index)
+	{                                                          assert(index < strlen(buffer));
 		return buffer[index];
 	}
 
@@ -75,12 +72,12 @@ namespace ben
 	{
 		u64 length = 0;
 		u64 buffer_size = 0;
-		u8* buffer = nullptr;
+		char* buffer = nullptr;
 
 		stru64() = default;
 		stru64(const char* str);
 		stru64& operator=(const char* str);
-		u8& operator[](u8);
+		char& operator[](u8);
 		explicit operator       char* ();
 		explicit operator const char* () const;
 
@@ -88,31 +85,24 @@ namespace ben
 	};
 
 	stru64::stru64(const char* str)
-	{
-		assert(buffer);
-		buffer_size = length = strlen((char*)buffer) + 1;
-		buffer = (u8*)calloc(length, sizeof(u8));
-		assert(buffer);
-		strcpy((char*)buffer, str);
-		assert(buffer);
+	{                                                          assert(str != nullptr);
+		buffer_size = length = strlen(str) + 1;
+		buffer = (char*)calloc(length, sizeof(u8));            assert(buffer != nullptr);
+		strcpy(buffer, str);                                   assert(buffer != nullptr);
 	}
 
 	stru64& stru64::operator=(const char* str)
-	{
-		buffer_size = length = strlen(str) + 1;
-		auto ptr = realloc(buffer, length);
-		assert(ptr);
-		buffer = (u8*)ptr;
-		assert(buffer != nullptr);
-		strcpy((char*)buffer, str);
-		assert(buffer);
+	{                                                          assert(str != nullptr);
+		buffer_size = length = strlen(str) + 1;               
+		auto ptr = realloc(buffer, length);                    assert(ptr != nullptr);
+		buffer = (char*)ptr;                                   assert(buffer != nullptr);
+		strcpy(buffer, str);                                   assert(buffer != nullptr);
 
 		return *this;
 	}
 
-	u8& stru64::operator[](u8 index)
-	{
-		assert(index < length);
+	char& stru64::operator[](u8 index)
+	{                                                          assert(index < length);
 		return buffer[index];
 	}
 
@@ -142,28 +132,28 @@ namespace ben
 
 		ben::str120 temp_buffer;
 		va_start(arg, format);
-		done = vsnprintf((char*)temp_buffer, ben::str120::buffer_size, format, arg);
-		assert(done > -1 && done < ben::str120::buffer_size);
+
+		done = vsnprintf(temp_buffer, 120, format, arg);
+		                                                       assert(done > -1 && done < 120);
 		va_end(arg);
 
 		if (buffer == nullptr)
 		{
-			*this = (char*)temp_buffer;
+			*this = temp_buffer;
 		}
 		else
 		{
-			length += strlen((char*)temp_buffer);
+			length += strlen(temp_buffer);
 			if (buffer_size < length)
 			{
 				buffer_size = (u64)(length * 1.5);
 				auto ptr = realloc(buffer, buffer_size);
 				assert(ptr);
-				buffer = (u8*)ptr;
+				buffer = (char*)ptr;
 				assert(buffer);
 			}
 
-			strcat((char*)buffer, (char*)temp_buffer);
-			assert(buffer);
+			strcat(buffer, temp_buffer);                       assert(buffer);
 		}
 
 		return done;
