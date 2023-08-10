@@ -44,13 +44,14 @@ namespace btl
 
 		tree();
 		// x----------------------------------------------------------------------------------------------x
-		// |   - adds specified data to corresponding layer allocation                                    |
 		// |   - increments layer size                                                                    |
-		// |   - adds conceptual branch information to the "parent layer" above it                        |
+		// |   - adds specified data to corresponding layer allocation                                    |
+		// |   - adds conceptual branches of default count 0 to current layer (if it isnt a leaf layer)   |
+		// |   - if it has a parent layer, adds new data count to the 0th parent branch (should select)   |
 		// x----------------------------------------------------------------------------------------------x
 		//
 		template <class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
-		void runtime_validation() const;
+		void print_conceptual() const;
 	private:
 		u64   layer_sizes[count_t]            = { 0 };
 		void* layer_data[count_t]             = { 0 };
@@ -85,8 +86,9 @@ namespace btl
 		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
 		assert(memcmp(layer_branches, layer_branches + (count_t - 1) / 2, (count_t - 1) / 2) == 0);
-	}
 
+
+	}
 
 	template <class StartArgs, class... Args>
 	template <class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
@@ -102,17 +104,42 @@ namespace btl
 		data_allocation_ptr = data_realloc_ptr;
 
 		void* data_copy_result = memcpy(reinterpret_cast<LayerType*>(data_allocation_ptr) + new_type_count - count, data_ptr, sizeof(LayerType) * count);
-		                                                                                                                       assert(data_copy_result != nullptr);
+		
+		#pragma warning( push )
+		#pragma warning( disable : 6201 )
+		if (i < count_t - 1)
+		{
+			u64* parent_layer_branches_realloc_ptr = (u64*)realloc(layer_branches[i], sizeof(u64) * new_type_count);           assert(parent_layer_branches_realloc_ptr != nullptr);
+			layer_branches[i] = (u64*)parent_layer_branches_realloc_ptr;
+			
+			memset(layer_branches[i] + new_type_count - count, 0, sizeof(u64) * count);
+
+		}
 		if (i > 0)
 		{
-			#pragma warning( push )
-			#pragma warning( disable : 6201 )
-			u64*& parent_layer_branches_ptr = layer_branches[i - 1];                                                           assert(i - 1 < BTL_COUNTOF(layer_branches));
-			u64* parent_layer_branches_realloc_ptr = (u64*)realloc(parent_layer_branches_ptr, sizeof(u64) * new_type_count);   assert(parent_layer_branches_realloc_ptr != nullptr);
-			parent_layer_branches_ptr = (u64*)parent_layer_branches_realloc_ptr;
-			u64& child_branches = *(parent_layer_branches_ptr + new_type_count);
-			child_branches = 0;
-			#pragma warning( pop )
+			assert(layer_branches[i - 1] != nullptr);
+			(*layer_branches[i - 1]) += count;
+		}
+		#pragma warning( pop )
+	}
+
+	template <class StartArgs, class... Args>
+	void tree<StartArgs, Args...>::print_conceptual() const
+	{
+		for (u64 i = 0; i < count_t - 1; i++)
+		{
+			ben::printf("layer %u:\n", i);
+			if (layer_sizes[i] > 0)
+			{
+				ben::str120 fmt = layer_sizes[i] == 1 ? "%llu " : "%llu, ";
+				ben::printf("{ ");
+				for (u64 j = 0; j < layer_sizes[i]; j++)
+				{
+					u64 branch_value = *(layer_branches[i] + j);
+					ben::printf(fmt, branch_value);
+				}
+				ben::printf("}\n");
+			}
 		}
 	}
 
@@ -201,7 +228,7 @@ int main()
 		{1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}
 	};
 	ben::str120 str_data[] = {
-		"obama", "poop", "gaming"
+		"stinky", "chungus", "obamanomics", "epic win!11", "yep"
 	};
 	tree.add(vector_data, BTL_COUNTOF(vector_data));
 	tree.add(color_data, BTL_COUNTOF(color_data));
@@ -213,15 +240,15 @@ int main()
 
 	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<vec3>(), tree.size<vec3>(), sizeof(vec3));
 	for (const auto& vector : btl::make_iterable<vec3>(&tree))
-		info_buffer_vec3.catf("{ %.1f, %.1f, %.1f }\n", vector.x, vector.y, vector.z);
+		info_buffer_vec3.catf("-{ %.1f, %.1f, %.1f }\n", vector.x, vector.y, vector.z);
 
 	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<color>(), tree.size<color>(), sizeof(color));
 	for (const auto& color : btl::make_iterable<color>(&tree))
-		info_buffer_color.catf("{ %.1f, %.1f, %.1f, %.1f }\n", color.r, color.g, color.b, color.a);
+		info_buffer_color.catf("-{ %.1f, %.1f, %.1f, %.1f }\n", color.r, color.g, color.b, color.a);
 
 	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<ben::str120>(), tree.size<ben::str120>(), sizeof(ben::str120));
 	for (const auto& str : btl::make_iterable<ben::str120>(&tree))
-		info_buffer_str.catf("{ %s }\n", str);
+		info_buffer_str.catf("-%s\n", str);
 
 	ben::print(info_buffer_vec3);
 	ben::print(info_buffer_color);
@@ -265,6 +292,8 @@ int main()
 		str0.catf("A trivially copyable type is a type whose storage is contiguous");
 		memcpy(&str1, &str0, sizeof(ben::stru64));                                                                             assert(memcmp(&str1, &str0, sizeof(ben::stru64)) == 0);
 	}
+
+	tree.print_conceptual();
 
 	return 0;
 }
