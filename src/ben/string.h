@@ -135,9 +135,7 @@ namespace ben
 
 		ben::str120 temp_buffer;
 		va_start(arg, format);
-
-		done = vsnprintf(temp_buffer, 120, format, arg);
-		                                                       assert(done > -1 && done < 120);
+		done = vsnprintf(temp_buffer, 120, format, arg);       assert(done > -1 && done < 120);
 		va_end(arg);
 
 		if (buffer == nullptr)

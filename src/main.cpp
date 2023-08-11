@@ -50,7 +50,7 @@ namespace btl
 		// |   - if it has a parent layer, adds new data count to the 0th parent branch (should select)   |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
+		template <u64 ParentBranch = U64_MAX, class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
 		void print_conceptual() const;
 	private:
 		u64   layer_sizes[count_t]            = { 0 };
@@ -86,24 +86,26 @@ namespace btl
 		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
 		assert(memcmp(layer_branches, layer_branches + (count_t - 1) / 2, (count_t - 1) / 2) == 0);
-
-
 	}
 
 	template <class StartArgs, class... Args>
-	template <class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
+	template <u64 ParentBranch, class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
 	{
-		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain specified type");
+		static_assert(ParentBranch != 0 || pack_t::alias::index<LayerType>::value != 0, "ParentBranch parameter specified for layer 0 which does not have a parent layer!");
+
 		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
+		const constexpr u64 parent_branch_index = ParentBranch == U64_MAX ? 0 : ParentBranch;
 		layer_sizes[i] += count;
 		const u64& new_type_count = layer_sizes[i];
 		void*& data_allocation_ptr = layer_data[i];
 
-		void* data_realloc_ptr = realloc(data_allocation_ptr, sizeof(LayerType) * new_type_count);                             assert(data_realloc_ptr);
+		void* data_realloc_ptr = realloc(data_allocation_ptr, sizeof(LayerType) * new_type_count);                             assert(data_realloc_ptr != nullptr);
 
 		data_allocation_ptr = data_realloc_ptr;
 
-		void* data_copy_result = memcpy(reinterpret_cast<LayerType*>(data_allocation_ptr) + new_type_count - count, data_ptr, sizeof(LayerType) * count);
+		void* data_copy_dst_ptr = reinterpret_cast<LayerType*>(data_allocation_ptr) + new_type_count - count;
+		void* data_copy_result = memcpy(data_copy_dst_ptr, data_ptr, sizeof(LayerType) * count);
 		
 		#pragma warning( push )
 		#pragma warning( disable : 6201 )
@@ -116,9 +118,9 @@ namespace btl
 
 		}
 		if (i > 0)
-		{
-			assert(layer_branches[i - 1] != nullptr);
-			(*layer_branches[i - 1]) += count;
+		{                                                                                                                      assert(parent_branch_index < layer_sizes[i - 1]);
+			u64* parent_branch_ptr = layer_branches[i - 1] + parent_branch_index;                                              assert(layer_branches[i - 1] != nullptr);
+			*parent_branch_ptr += count;
 		}
 		#pragma warning( pop )
 	}
@@ -131,10 +133,10 @@ namespace btl
 			ben::printf("layer %u:\n", i);
 			if (layer_sizes[i] > 0)
 			{
-				ben::str120 fmt = layer_sizes[i] == 1 ? "%llu " : "%llu, ";
-				ben::printf("{ ");
+				ben::printf("{");
 				for (u64 j = 0; j < layer_sizes[i]; j++)
 				{
+					ben::str120 fmt = j == layer_sizes[i] - 1 ? "%llu" : "%llu, ";
 					u64 branch_value = *(layer_branches[i] + j);
 					ben::printf(fmt, branch_value);
 				}
@@ -231,8 +233,8 @@ int main()
 		"stinky", "chungus", "obamanomics", "epic win!11", "yep"
 	};
 	tree.add(vector_data, BTL_COUNTOF(vector_data));
-	tree.add(color_data, BTL_COUNTOF(color_data));
-	tree.add(str_data, BTL_COUNTOF(str_data));
+	tree.add<0>(color_data, BTL_COUNTOF(color_data));
+	tree.add<1>(str_data, BTL_COUNTOF(str_data));
 
 	ben::stru64 info_buffer_vec3;
 	ben::stru64 info_buffer_color;
