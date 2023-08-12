@@ -40,7 +40,7 @@ namespace btl
 		void* layer_data[count_t] = { 0 };
 		u64*  layer_branches[count_t - 1] = { 0 };
 		// x----------------------------------------------------------------------------------------------x
-		// |   - layer_parent_index[0] must allways be nullptr                                            |
+		// |   - layer_parent_index[0] must always be nullptr                                             |
 		// |   - layer_parent_index[i] stores the associated index of its parent in layer i - 1           |
 		// x----------------------------------------------------------------------------------------------x
 		//
@@ -147,15 +147,18 @@ namespace btl
 	{
 		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[pack_t::alias::index<LayerType>::value]);
 		const LayerType* p1 = &value;                                                                                          assert(p0 <= p1);
-		return pointer_offset(p0, p1);
+		return btl::pointer_offset(p0, p1);
 	}
 
 	template <class StartArgs, class... Args>
 	tree<StartArgs, Args...>::tree()
 	{
-		static_assert(pack_t::is_set, "parameter pack cannot contain duplicates");
+		static_assert(pack_t::reflexiveness == count_t, "all pack parameters must be reflexive");
 		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
+		static_assert(pack_t::is_set, "tree cannot contain duplicate types");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
+		//static_assert(pack_t::containment == count_t, "tree must contain all parameters which it contains");
+		ben::printf("tree containment : %u\n", pack_t::containment);
 		assert(layer_branches[0] == nullptr);
 		assert(memcmp(layer_branches, layer_parent_indices, count_t - 1) == 0);
 	}
@@ -198,8 +201,7 @@ namespace btl
 			parent_indices_allocation_ptr = (u64*)parent_indices_realloc_ptr;
 
 			u64* parent_indices_dst_ptr = parent_indices_allocation_ptr + old_type_count;
-			void* indicies_copy_result = memset(parent_indices_dst_ptr, parent_branch_index, sizeof(u64) * new_type_count);    assert(indicies_copy_result != nullptr);
-			                                                                                                                   assert(layer_parent_indices[0] == nullptr);
+			btl::memory_set(parent_indices_dst_ptr, parent_branch_index, new_type_count);									   assert(layer_parent_indices[0] == nullptr);
 			                                                                                                                   assert(parent_branch_index < layer_sizes[i - 1]);
 			u64* parent_branch_ptr = layer_branches[i - 1] + parent_branch_index;                                              assert(layer_branches[i - 1] != nullptr);
 			*parent_branch_ptr += count;
@@ -213,16 +215,17 @@ namespace btl
 		static_assert(pack_t::alias::contains<ParentLayerType>::value, "tree does not contain ParentLayerType");
 		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
 		static_assert(pack_t::alias::index<ParentLayerType>::value < pack_t::alias::index<LayerType>::value, "specified ParentLayerType must be a parent type of tree_val!");
-		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
-		const constexpr u64 j = pack_t::alias::index<ParentLayerType>::value;
+		const constexpr u64 this_layer = pack_t::alias::index<LayerType>::value;
+		const constexpr u64 parent_layer = pack_t::alias::index<ParentLayerType>::value;
 
-		u64 current_index = value_index(tree_val);                                                                             assert(current_index < layer_sizes[i]);
-		                                                                                                                       assert(layer_parent_indices[i] != nullptr);
-		u64 parent_index = *(layer_parent_indices[i] + current_index);                                                         assert(parent_index < layer_sizes[j]);
+		u64 current_index = value_index(tree_val);                                                                             assert(current_index < layer_sizes[this_layer]);
+		                                                                                                                       assert(layer_parent_indices[this_layer] != nullptr);
+		u64* parent_indices_ptr = layer_parent_indices[this_layer];		                                                       assert(this_layer != 0);
+		u64 parent_index = *(parent_indices_ptr + current_index);                                                              assert(parent_index < layer_sizes[parent_layer]);
 
-		ParentLayerType* parent_ptr = reinterpret_cast<ParentLayerType*>(layer_data[i]) + parent_index;                        assert(parent_ptr != nullptr);
+		ParentLayerType* parent_ptr = reinterpret_cast<ParentLayerType*>(layer_data[parent_layer]) + parent_index;             assert(parent_ptr != nullptr);
 
-		return reinterpret_cast<const ParentLayerType&>(parent_ptr);
+		return *parent_ptr;
 	}
 
 

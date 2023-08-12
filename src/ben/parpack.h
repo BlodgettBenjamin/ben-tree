@@ -29,6 +29,19 @@ namespace btl
 				std::is_same<T, ArgFinal>::value ? true : false;
 		};
 
+		template <class T, class NextArg, class... PackArgs>
+		struct contains_rec_u64
+		{
+			static constexpr u64 const value =
+				std::is_same<T, NextArg>::value ? 1 : contains_rec_u64<T, PackArgs...>::value;
+		};
+		template <class T, class ArgFinal>
+		struct contains_rec_u64<T, ArgFinal>
+		{
+			static constexpr u64 const value =
+				std::is_same<T, ArgFinal>::value ? 1 : 0;
+		};
+
 		template <u64 N, class T, class NextArg, class... PackArgs>
 		struct index_rec
 		{
@@ -80,6 +93,31 @@ namespace btl
 			static constexpr u64 const value =
 				std::is_pointer<ArgFinal>::value ? 1 : 0;
 		};
+
+		template <class NextArg, class... PackArgs>
+		struct containment_rec
+		{
+			static constexpr u64 const value =
+				contains_rec_u64<NextArg, PackArgs...>::value + containment_rec<PackArgs...>::value;
+		};
+		template <class ArgFinal>
+		struct containment_rec<ArgFinal>
+		{
+			static constexpr u64 const value = 1;
+		};
+
+		template <class NextArg, class... PackArgs>
+		struct reflexiveness_rec
+		{
+			static constexpr u64 const value =
+				std::is_same<NextArg, NextArg>::value + reflexiveness_rec<PackArgs...>::value;
+		};
+		template <class ArgFinal>
+		struct reflexiveness_rec<ArgFinal>
+		{
+			static constexpr u64 const value =
+				std::is_same<ArgFinal, ArgFinal>::value;
+		};
 	public:
 		struct alias
 		{
@@ -94,6 +132,10 @@ namespace btl
 			using triviality = triviality_rec<StartArgs, Args...>;
 
 			using pointedness = pointedness_rec<StartArgs, Args...>;
+
+			using containment = containment_rec<StartArgs, Args...>;
+
+			using reflexiveness = reflexiveness_rec<StartArgs, Args...>;
 		};
 
 		template <class T>
@@ -109,5 +151,9 @@ namespace btl
 		static constexpr u64 triviality = alias::triviality::value;
 
 		static constexpr u64 pointedness = alias::pointedness::value;
+
+		static constexpr u64 containment = alias::containment::value;
+
+		static constexpr u64 reflexiveness = alias::reflexiveness::value;
 	};
 }
