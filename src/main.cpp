@@ -34,11 +34,7 @@ namespace user
 
 int main()
 {
-	static_assert(std::is_same<user::vec3, user::vec3>::value == true);
-	static_assert(std::is_same<user::color, user::color>::value == true);
-	static_assert(std::is_same<ben::str120, ben::str120>::value == true);
 	btl::tree<user::vec3, user::color, ben::str120> tree;
-	ben::printf("pack containment : %u\n", btl::pack<int, bool, float, user::vec3, user::color, ben::str120>::containment);
 
 	user::vec3 vector_data[] = {
 		{1.0f, 2.5f, 4.5f}, {9.5f, 2.7f, 9.2f}
@@ -61,31 +57,31 @@ int main()
 	ben::stru64 info_buffer_color;
 	ben::stru64 info_buffer_str;
 
-	//info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<user::vec3>(), tree.size<user::vec3>(), sizeof(user::vec3));
-	//for (const auto& vector : btl::make_iterable<user::vec3>(&tree))
-	//	info_buffer_vec3.catf("-{ %.1f, %.1f, %.1f }\n", vector.x, vector.y, vector.z);
+	info_buffer_vec3.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<user::vec3>(), tree.size<user::vec3>(), sizeof(user::vec3));
+	for (const auto& vector : btl::make_iterable<user::vec3>(&tree))
+		info_buffer_vec3.catf("-{ %.1f, %.1f, %.1f }\n", vector.x, vector.y, vector.z);
 
-	//info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<user::color>(), tree.size<user::color>(), sizeof(user::color));
-	//for (const auto& color : btl::make_iterable<user::color>(&tree))
-	//{
-	//	const auto& vector = tree.get_parent<user::vec3>(color);
+	info_buffer_color.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<user::color>(), tree.size<user::color>(), sizeof(user::color));
+	for (const auto& color : btl::make_iterable<user::color>(&tree))
+	{
+		const auto& vector = tree.get_parent<user::vec3>(color);
 
-	//	info_buffer_color.catf("-{ %.1f, %.1f, %.1f, %.1f }\tparent : -{ %.1f, %.1f, %.1f }\n",
-	//		color.r, color.g, color.b, color.a, vector.x, vector.y, vector.z);
-	//}
+		info_buffer_color.catf("-{ %.1f, %.1f, %.1f, %.1f }\tparent : -{ %.1f, %.1f, %.1f }\n",
+			color.r, color.g, color.b, color.a, vector.x, vector.y, vector.z);
+	}
 
-	//info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<ben::str120>(), tree.size<ben::str120>(), sizeof(ben::str120));
-	//for (const auto& str : btl::make_iterable<ben::str120>(&tree))
-	//{
-	//	const auto& col = tree.get_parent<user::color>(tree);
+	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<ben::str120>(), tree.size<ben::str120>(), sizeof(ben::str120));
+	for (const auto& str : btl::make_iterable<ben::str120>(&tree))
+	{
+		const auto& col = tree.get_parent<user::color>(tree);
 
-	//	info_buffer_str.catf("-%s\tparent : -{ %.1f, %.1f, %.1f, %.1f }\n",
-	//		str, col.r, col.g, col.b, col.a);
-	//}
+		info_buffer_str.catf("-%s\tparent : -{ %.1f, %.1f, %.1f, %.1f }\n",
+			str, col.r, col.g, col.b, col.a);
+	}
 
 	ben::print(info_buffer_vec3);
 	ben::print(info_buffer_color);
-	ben::print(info_buffer_str);
+	//ben::print(info_buffer_str);
 
 	struct obama {};
 	struct poop {};

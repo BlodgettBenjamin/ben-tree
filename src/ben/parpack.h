@@ -29,19 +29,6 @@ namespace btl
 				std::is_same<T, ArgFinal>::value ? true : false;
 		};
 
-		template <class T, class NextArg, class... PackArgs>
-		struct contains_rec_u64
-		{
-			static constexpr u64 const value =
-				std::is_same<T, NextArg>::value ? 1 : contains_rec_u64<T, PackArgs...>::value;
-		};
-		template <class T, class ArgFinal>
-		struct contains_rec_u64<T, ArgFinal>
-		{
-			static constexpr u64 const value =
-				std::is_same<T, ArgFinal>::value ? 1 : 0;
-		};
-
 		template <u64 N, class T, class NextArg, class... PackArgs>
 		struct index_rec
 		{
@@ -98,12 +85,13 @@ namespace btl
 		struct containment_rec
 		{
 			static constexpr u64 const value =
-				contains_rec_u64<NextArg, PackArgs...>::value + containment_rec<PackArgs...>::value;
+				contains_rec<NextArg, NextArg, PackArgs...>::value + containment_rec<PackArgs...>::value;
 		};
 		template <class ArgFinal>
 		struct containment_rec<ArgFinal>
 		{
-			static constexpr u64 const value = 1;
+			static constexpr u64 const value =
+				contains_rec<ArgFinal, ArgFinal>::value;
 		};
 
 		template <class NextArg, class... PackArgs>
