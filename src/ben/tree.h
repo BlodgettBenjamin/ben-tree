@@ -212,9 +212,12 @@ namespace btl
 	template <class StartArgs, class... Args>
 	template <class ParentLayerType, class LayerType> const ParentLayerType& tree<StartArgs, Args...>::get_parent(const LayerType& tree_val) const
 	{
+		static_assert(std::is_same<LayerType, ParentLayerType>::value == false, "do not attempt to get the equal type parent of tree_val type");
+		static_assert(std::is_same<pack_t, LayerType>::value == false, "do not this tree's parameter pack into get_parent");
+		static_assert(std::is_same<LayerType, tree<StartArgs, Args...>>::value == false, "do not pass a tree of this tree type into get_parent");
 		static_assert(pack_t::alias::contains<ParentLayerType>::value, "tree does not contain ParentLayerType");
 		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
-		static_assert(pack_t::alias::index<ParentLayerType>::value < pack_t::alias::index<LayerType>::value, "specified ParentLayerType must be a parent type of tree_val!");
+		static_assert(pack_t::alias::index<ParentLayerType>::value < pack_t::alias::index<LayerType>::value, "specified ParentLayerType must be a parent type of tree_val");
 		const constexpr u64 this_layer = pack_t::alias::index<LayerType>::value;
 		const constexpr u64 parent_layer = pack_t::alias::index<ParentLayerType>::value;
 

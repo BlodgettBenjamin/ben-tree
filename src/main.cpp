@@ -73,7 +73,7 @@ int main()
 	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<ben::str120>(), tree.size<ben::str120>(), sizeof(ben::str120));
 	for (const auto& str : btl::make_iterable<ben::str120>(&tree))
 	{
-		const auto& col = tree.get_parent<user::color>(tree);
+		const auto& col = tree.get_parent<user::color>(str);
 
 		info_buffer_str.catf("-%s\tparent : -{ %.1f, %.1f, %.1f, %.1f }\n",
 			str, col.r, col.g, col.b, col.a);
@@ -81,7 +81,7 @@ int main()
 
 	ben::print(info_buffer_vec3);
 	ben::print(info_buffer_color);
-	//ben::print(info_buffer_str);
+	ben::print(info_buffer_str);
 
 	struct obama {};
 	struct poop {};
