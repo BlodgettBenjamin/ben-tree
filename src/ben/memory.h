@@ -4,7 +4,7 @@
 
 #include "type.h"
 
-#define BTL_COUNTOF(array) (sizeof(array) / sizeof(array[0]))
+#define BEN_COUNTOF(array) (sizeof(array) / sizeof(array[0]))
 
 namespace btl
 {
@@ -12,6 +12,11 @@ namespace btl
 	template <typename T> inline void memory_copy(T* dst_ptr, const T* src_ptr, u64 count_t = 1);
 	template <typename T> inline u64 pointer_offset(const T* pointer1, const T* pointer2);
 	template <typename T> inline void memory_set(T* dst_ptr, const T& src_val, u64 count_t = 1);
+}
+
+namespace ben
+{
+	u64 bytes_same(const void* data_ptr);
 }
 
 template <typename T>
@@ -46,4 +51,14 @@ inline void btl::memory_set(T* dst_ptr, const T& src_val, u64 count_t)
 	for (u64 i = 0; i < count_t; i++)
 		memcpy(dst_ptr + i, &src_val, sizeof(T));
 	assert(memcmp(dst_ptr, dst_ptr + count_t / 2, sizeof(T) * count_t / 2) == 0);
+}
+
+u64 ben::bytes_same(const void* data_ptr)
+{
+	const u8* next = reinterpret_cast<const u8*>(data_ptr) + 1;
+
+	if (memcmp(data_ptr, next, 1) != 0)
+		return 1;
+
+	return 1 + bytes_same(next);
 }

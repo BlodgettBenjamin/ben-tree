@@ -38,7 +38,13 @@ namespace btl
 	private:
 		u64   layer_sizes[count_t] = { 0 };
 		void* layer_data[count_t] = { 0 };
-		u64*  layer_branches[count_t - 1] = { 0 };
+		// x----------------------------------------------------------------------------------------------x
+		// |   - layer_branches[count_t - 1] must always be nullptr                                       |
+		// |   - layer_branches[i] stores a conceptual "branch" which is just the number of children in   |
+		// |     the next layer who consider layer_branch[i] their parent                                 |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		u64*  layer_branches[count_t] = { 0 };
 		// x----------------------------------------------------------------------------------------------x
 		// |   - layer_parent_index[0] must always be nullptr                                             |
 		// |   - layer_parent_index[i] stores the associated index of its parent in layer i - 1           |
@@ -158,49 +164,52 @@ namespace btl
 		static_assert(pack_t::is_set, "tree cannot contain duplicate types");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
 		static_assert(pack_t::containment == count_t, "tree must contain all parameters which it contains");
-		ben::printf("tree containment : %u\n", pack_t::containment);
-		assert(layer_branches[0] == nullptr);
-		assert(memcmp(layer_branches, layer_parent_indices, count_t - 1) == 0);
+
+		u64* layer_parent_indices[count_t] = { 0 };
+		ben::printf("sizeof(layer_sizes): %u\n", sizeof(layer_sizes));
+		ben::printf("sizeof(layer_data): %u\n", sizeof(layer_data));
+		ben::printf("sizeof(layer_branches): %u\n", sizeof(layer_branches));
+		ben::printf("sizeof(layer_parent_indices): %u\n", sizeof(layer_parent_indices));
+		assert(ben::bytes_same(this) >= sizeof(this));
+		assert(layer_sizes[0] == 0);
 	}
 
 	template <class StartArgs, class... Args>
 	template <u64 ParentBranch, class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
 	{
-		static_assert(pack_t::alias::contains<LayerType>::value,
-			"tree does not contain specified type");
-		static_assert(ParentBranch != 0 || pack_t::alias::index<LayerType>::value != 0,
-			"ParentBranch parameter specified for layer 0 which does not have a parent layer!");
+		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain specified type");
+		static_assert(ParentBranch != 0 || pack_t::alias::index<LayerType>::value != 0, "ParentBranch parameter specified for layer 0 which does not have a parent layer!");
 
 		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
 		layer_sizes[i] += count;
 		const constexpr u64 parent_branch_index = ParentBranch == U64_MAX ? 0 : ParentBranch;
 		const u64 new_type_count = layer_sizes[i];
 		const u64 old_type_count = new_type_count - count;
-		void*& data_allocation_ptr = layer_data[i];
-		u64*& parent_indices_allocation_ptr = layer_parent_indices[i];
+		void*& data = layer_data[i];
+		u64*& branches = layer_branches[i];
+		u64*& parent_indices = layer_parent_indices[i];
 
-		void* data_realloc_ptr = realloc(data_allocation_ptr, sizeof(LayerType) * new_type_count);                             assert(data_realloc_ptr != nullptr);
-		data_allocation_ptr = data_realloc_ptr;
+		void* data_realloc_ptr = realloc(data, sizeof(LayerType) * new_type_count);                                            assert(data_realloc_ptr != nullptr);
+		data = data_realloc_ptr;
 
-		void* data_copy_dst_ptr = reinterpret_cast<LayerType*>(data_allocation_ptr) + old_type_count;
+		void* data_copy_dst_ptr = reinterpret_cast<LayerType*>(data) + old_type_count;
 		void* data_copy_result = memcpy(data_copy_dst_ptr, data_ptr, sizeof(LayerType) * count);                               assert(data_copy_result != nullptr);
 
 #		pragma warning( push )
 #		pragma warning( disable : 6201 )
 		if (i < count_t - 1)
 		{
-			u64* parent_layer_branches_realloc_ptr = (u64*)realloc(layer_branches[i], sizeof(u64) * new_type_count);           assert(parent_layer_branches_realloc_ptr != nullptr);
-			layer_branches[i] = (u64*)parent_layer_branches_realloc_ptr;
+			u64* parent_layer_branches_realloc_ptr = (u64*)realloc(branches, sizeof(u64) * new_type_count);                    assert(parent_layer_branches_realloc_ptr != nullptr);
+			branches = (u64*)parent_layer_branches_realloc_ptr;
 
-			memset(layer_branches[i] + old_type_count, 0, sizeof(u64) * count);
-
+			memset(branches + old_type_count, 0, sizeof(u64) * count);
 		}
 		if (i > 0)
 		{
-			void* parent_indices_realloc_ptr = realloc(parent_indices_allocation_ptr, sizeof(u64) * new_type_count);           assert(parent_indices_realloc_ptr != nullptr);
-			parent_indices_allocation_ptr = (u64*)parent_indices_realloc_ptr;
+			void* parent_indices_realloc_ptr = realloc(parent_indices, sizeof(u64) * new_type_count);                          assert(parent_indices_realloc_ptr != nullptr);
+			parent_indices = (u64*)parent_indices_realloc_ptr;
 
-			u64* parent_indices_dst_ptr = parent_indices_allocation_ptr + old_type_count;
+			u64* parent_indices_dst_ptr = parent_indices + old_type_count;
 			btl::memory_set(parent_indices_dst_ptr, parent_branch_index, new_type_count);									   assert(layer_parent_indices[0] == nullptr);
 			                                                                                                                   assert(parent_branch_index < layer_sizes[i - 1]);
 			u64* parent_branch_ptr = layer_branches[i - 1] + parent_branch_index;                                              assert(layer_branches[i - 1] != nullptr);
