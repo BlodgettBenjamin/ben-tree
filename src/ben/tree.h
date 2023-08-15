@@ -12,6 +12,8 @@ namespace btl
 		using pack_t = pack<StartArgs, Args...>;
 	public:
 		static constexpr u64 const count_t = pack_t::count;
+		static constexpr u64 const leaf_t = pack_t::count - 1;
+		static constexpr u64 const base_t = 0;
 		// x----------------------------------------------------------------------------------------------x
 		// |   - constexpr functions have turned out to suck really bad                                   |
 		// |   - should make these non constexpr and have them as "getters" instead                       |
@@ -33,21 +35,33 @@ namespace btl
 		// x----------------------------------------------------------------------------------------------x
 		//
 		template <u64 ParentBranch = U64_MAX, class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
+		// x----------------------------------------------------------------------------------------------x
+		// |   - same as regular add but a const reference to the specified parent can be specified       |
+		// |     instead of explicitly specifying the parent branch index as a template parameter         |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		template <class ParentLayerType, class LayerType> void add_child(const ParentLayerType& parent, const LayerType* data_ptr, u64 count = 1);
+		// x----------------------------------------------------------------------------------------------x
+		// |   - takes const reference of an actual tree value and returns the associated parent          |
+		// |     reference using internal parent indices data                                             |
+		// |   - should not be called for child type corresponding to layer 0                             |
+		// x----------------------------------------------------------------------------------------------x
+		//
 		template <class ParentLayerType, class LayerType> const ParentLayerType& get_parent(const LayerType& tree_val) const;
 		void print_conceptual() const;
 	private:
 		u64   layer_sizes[count_t] = { 0 };
 		void* layer_data[count_t] = { 0 };
 		// x----------------------------------------------------------------------------------------------x
-		// |   - layer_branches[count_t - 1] must always be nullptr                                       |
-		// |   - layer_branches[i] stores a conceptual "branch" which is just the number of children in   |
-		// |     the next layer who consider layer_branch[i] their parent                                 |
+		// |   - layer_branches[leaf_t] must always be nullptr                                            |
+		// |   - layer_branches[t] stores a conceptual "branch" which is just the number of children in   |
+		// |     the next layer who consider layer_branch[t] their parent                                 |
 		// x----------------------------------------------------------------------------------------------x
 		//
 		u64*  layer_branches[count_t] = { 0 };
 		// x----------------------------------------------------------------------------------------------x
 		// |   - layer_parent_index[0] must always be nullptr                                             |
-		// |   - layer_parent_index[i] stores the associated index of its parent in layer i - 1           |
+		// |   - layer_parent_index[t] stores the associated index of its parent in layer t - 1           |
 		// x----------------------------------------------------------------------------------------------x
 		//
 		u64*  layer_parent_indices[count_t] = { 0 };
@@ -124,32 +138,47 @@ namespace btl
 	template <typename LayerType, class tree_t>
 	layer::iterable<LayerType, tree_t> make_iterable(tree_t* tree)
 	{
-		return layer::iterable<LayerType, tree_t>(tree->ptr<LayerType>(), tree->ptr<LayerType>() + tree->size<LayerType>());
+		const auto p0 = tree->ptr<LayerType>();
+		const auto p1 = tree->ptr<LayerType>() + tree->size<LayerType>();
+		return layer::iterable<LayerType, tree_t>(p0, p1);
 	}
 
 	template <class StartArgs, class... Args>
-	template <class LayerType> constexpr u64 tree<StartArgs, Args...>::index() const
+	template <class LayerType> constexpr u64 tree<StartArgs, Args...>
+	::index() const
 	{
-		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		/* asserts */ {
+		// tree must contain LayerType                                                         0
+		static_assert(pack_t::alias::contains<LayerType>::value);//                            0
+		}
 		return pack_t::alias::index<LayerType>::value;
 	}
 
 	template <class StartArgs, class... Args>
-	template <class LayerType> u64 tree<StartArgs, Args...>::size() const
+	template <class LayerType> u64 tree<StartArgs, Args...>
+	::size() const
 	{
-		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		/* asserts */ {
+		// tree must contain LayerType                                                         0
+		static_assert(pack_t::alias::contains<LayerType>::value,                              "0");
+		}
 		return layer_sizes[index<LayerType>()];
 	}
 
 	template <class StartArgs, class... Args>
-	template <class LayerType> LayerType* tree<StartArgs, Args...>::ptr()
+	template <class LayerType> LayerType* tree<StartArgs, Args...>
+	::ptr()
 	{
-		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
+		/* asserts */ {
+		// tree must contain LayerType                                                         0
+		static_assert(pack_t::alias::contains<LayerType>::value,                              "0");
+		}
 		return reinterpret_cast<LayerType*>(layer_data[index<LayerType>()]);
 	}
 
 	template <class StartArgs, class... Args>
-	template <class LayerType> u64 tree<StartArgs, Args...>::value_index(const LayerType& value) const
+	template <class LayerType> u64 tree<StartArgs, Args...>
+	::value_index(const LayerType& value) const
 	{
 		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[pack_t::alias::index<LayerType>::value]);
 		const LayerType* p1 = &value;                                                                                          assert(p0 <= p1);
@@ -157,15 +186,23 @@ namespace btl
 	}
 
 	template <class StartArgs, class... Args>
-	tree<StartArgs, Args...>::tree()
+	tree<StartArgs, Args...>
+	::tree()
 	{
-		static_assert(pack_t::containment == count_t, "tree must contain all parameters which it contains");
-		static_assert(pack_t::reflexiveness == count_t, "all pack parameters must be reflexive");
-		static_assert(pack_t::is_set, "tree cannot contain duplicate types");
-		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
-		static_assert(pack_t::referentiality == 0, "tree layers cannot be comprised of references");
-		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
-
+		/* asserts */ {
+		// tree must contain all parameters which it contains                                  0   
+		// all pack parameters must be reflexive                                               1   
+		// tree cannot contain duplicate types                                                 2   
+		// tree layers cannot be comprised of pointers                                         3   
+		// tree layers cannot be comprised of references                                       4   
+		// all pack parameters must be trivially copyable                                      5   
+		static_assert(pack_t::containment == count_t,                                         "0"); 
+		static_assert(pack_t::reflexiveness == count_t,                                       "1"); 
+		static_assert(pack_t::is_set,                                                         "2");
+		static_assert(pack_t::pointedness == 0,                                               "3"); 
+		static_assert(pack_t::referentiality == 0,                                            "4"); 
+		static_assert(pack_t::triviality == count_t,                                          "5"); 
+		}
 		u64* layer_parent_indices[count_t] = { 0 };
 		ben::printf("sizeof(layer_sizes): %u\n", sizeof(layer_sizes));
 		ben::printf("sizeof(layer_data): %u\n", sizeof(layer_data));
@@ -176,58 +213,71 @@ namespace btl
 	}
 
 	template <class StartArgs, class... Args>
-	template <u64 ParentBranch, class LayerType> void tree<StartArgs, Args...>::add(const LayerType* data_ptr, u64 count)
+	template <u64 ParentBranch, class LayerType> void tree<StartArgs, Args...>
+	::add(const LayerType* data_ptr, u64 count)
 	{
-		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain specified type");
-		static_assert(ParentBranch != 0 || pack_t::alias::index<LayerType>::value != 0, "ParentBranch parameter specified for layer 0 which does not have a parent layer!");
-
-		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
-		layer_sizes[i] += count;
-		const constexpr u64 parent_branch_index = ParentBranch == U64_MAX ? 0 : ParentBranch;
-		const u64 new_type_count = layer_sizes[i];
-		const u64 old_type_count = new_type_count - count;
-		void*& data = layer_data[i];
-		u64*& branches = layer_branches[i];
-		u64*& parent_indices = layer_parent_indices[i];
-
-		void* data_realloc_ptr = realloc(data, sizeof(LayerType) * new_type_count);                                            assert(data_realloc_ptr != nullptr);
-		data = data_realloc_ptr;
-
-		void* data_copy_dst_ptr = reinterpret_cast<LayerType*>(data) + old_type_count;
-		void* data_copy_result = memcpy(data_copy_dst_ptr, data_ptr, sizeof(LayerType) * count);                               assert(data_copy_result != nullptr);
-
-#		pragma warning( push )
-#		pragma warning( disable : 6201 )
-		if (i < count_t - 1)
-		{
-			u64* parent_layer_branches_realloc_ptr = (u64*)realloc(branches, sizeof(u64) * new_type_count);                    assert(parent_layer_branches_realloc_ptr != nullptr);
-			branches = (u64*)parent_layer_branches_realloc_ptr;
-
-			memset(branches + old_type_count, 0, sizeof(u64) * count);
+		/* asserts */ {
+		// tree must contain specified type                                                    0
+		// base_t must not be specified for ParentBranch                                       1
+		static_assert(pack_t::alias::contains<LayerType>::value,                              "0");
+		static_assert(ParentBranch != 0 || pack_t::alias::index<LayerType>::value != base_t,  "1");
 		}
-		if (i > 0)
-		{
-			void* parent_indices_realloc_ptr = realloc(parent_indices, sizeof(u64) * new_type_count);                          assert(parent_indices_realloc_ptr != nullptr);
-			parent_indices = (u64*)parent_indices_realloc_ptr;
+		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
 
-			u64* parent_indices_dst_ptr = parent_indices + old_type_count;
-			btl::memory_set(parent_indices_dst_ptr, parent_branch_index, new_type_count);									   assert(layer_parent_indices[0] == nullptr);
-			                                                                                                                   assert(parent_branch_index < layer_sizes[i - 1]);
-			u64* parent_branch_ptr = layer_branches[i - 1] + parent_branch_index;                                              assert(layer_branches[i - 1] != nullptr);
-			*parent_branch_ptr += count;
+		const u64 old_count = layer_sizes[t];
+		layer_sizes[t] += count;
+		const u64 new_count = layer_sizes[t];
+
+		auto typed_data_ptr = reinterpret_cast<LayerType*>(layer_data[t]);
+		layer_data[t] = btl::append_allocation(typed_data_ptr, data_ptr, old_count, new_count);
+
+		if (t > base_t)
+		{
+#			pragma warning( push )
+#			pragma warning( disable : 6201 )
+			const constexpr u64 parent_t = t - 1;
+			const constexpr u64 parent_i = ParentBranch == U64_MAX ? 0 : ParentBranch;                                         assert(layer_branches[t - 1] != nullptr);
+			btl::append_set_allocation(layer_parent_indices[t], parent_i, old_count, new_count); 
+			layer_branches[parent_t][parent_i] += count;
+#			pragma warning( pop )
 		}
-#		pragma warning( pop )
+		if (t < leaf_t)
+		{
+			btl::append_allocation0(layer_branches[t], old_count, new_count);
+		}
 	}
 
 	template <class StartArgs, class... Args>
-	template <class ParentLayerType, class LayerType> const ParentLayerType& tree<StartArgs, Args...>::get_parent(const LayerType& tree_val) const
+	template <class ParentLayerType, class LayerType> void tree<StartArgs, Args...>
+	::add_child(const ParentLayerType& parent, const LayerType* data_ptr, u64 count)
 	{
-		static_assert(std::is_same<LayerType, ParentLayerType>::value == false, "do not attempt to get the equal type parent of tree_val type");
-		static_assert(std::is_same<pack_t, LayerType>::value == false, "do not this tree's parameter pack into get_parent");
-		static_assert(std::is_same<LayerType, tree<StartArgs, Args...>>::value == false, "do not pass a tree of this tree type into get_parent");
-		static_assert(pack_t::alias::contains<ParentLayerType>::value, "tree does not contain ParentLayerType");
-		static_assert(pack_t::alias::contains<LayerType>::value, "tree does not contain LayerType");
-		static_assert(pack_t::alias::index<ParentLayerType>::value < pack_t::alias::index<LayerType>::value, "specified ParentLayerType must be a parent type of tree_val");
+		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
+		const constexpr u64 branch = value_index(parent);                                                                      assert(branch < layer_sizes[base_t]);
+
+		add<branch>(data_ptr, count);
+	}
+
+
+	template <class StartArgs, class... Args>
+	template <class ParentLayerType, class LayerType> const ParentLayerType& tree<StartArgs, Args...>
+	::get_parent(const LayerType& tree_val) const
+	{
+		/* asserts */ {
+		// do not attempt to get the equal type parent of tree_val type                        0 
+		// do not this tree's parameter pack into get_parent                                   1
+		// do not pass a tree of this tree type into get_parent                                2
+		// tree must contain ParentLayerType                                                   3
+		// tree must contain LayerType                                                         4
+		// specified ParentLayerType must be a parent type of tree_val                         5
+		const constexpr auto parent_index = pack_t::alias::index<ParentLayerType>::value;
+		const constexpr auto child_index = pack_t::alias::index<LayerType>::value;
+		static_assert(std::is_same<LayerType, ParentLayerType>::value == false,               "0");
+		static_assert(std::is_same<pack_t, LayerType>::value == false,                        "1");
+		static_assert(std::is_same<LayerType, tree<StartArgs, Args...>>::value == false,      "2");
+		static_assert(pack_t::alias::contains<ParentLayerType>::value,                        "3");
+		static_assert(pack_t::alias::contains<LayerType>::value,                              "4");
+		static_assert(parent_index < child_index,                                             "5");
+		}
 		const constexpr u64 this_layer = pack_t::alias::index<LayerType>::value;
 		const constexpr u64 parent_layer = pack_t::alias::index<ParentLayerType>::value;
 
@@ -245,16 +295,16 @@ namespace btl
 	template <class StartArgs, class... Args>
 	void tree<StartArgs, Args...>::print_conceptual() const
 	{
-		for (u64 i = 0; i < count_t - 1; i++)
+		for (u64 t = base_t; t < leaf_t; t++)
 		{
-			ben::printf("layer %u:\n", i);
-			if (layer_sizes[i] > 0)
+			ben::printf("layer %u:\n", t);
+			if (layer_sizes[t] > 0)
 			{
 				ben::printf("{");
-				for (u64 j = 0; j < layer_sizes[i]; j++)
+				for (u64 i = 0; i < layer_sizes[t]; i++)
 				{
-					ben::str120 fmt = j == layer_sizes[i] - 1 ? "%llu" : "%llu, ";
-					u64 branch_value = *(layer_branches[i] + j);
+					ben::str120 fmt = i == layer_sizes[t] - 1 ? "%llu" : "%llu, ";
+					u64 branch_value = *(layer_branches[t] + i);
 					ben::printf(fmt, branch_value);
 				}
 				ben::printf("}\n");

@@ -41,7 +41,7 @@ int main()
 		{1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}
 	};
 	user::color some_more_color_data[] = {
-		{0.55f, 0.23f, 0.6f, 1.0f}, {0.5f, 0.5f, 0.5f, 1.0f}, {0.15f, 0.23f, 0.45f, 1.0f}
+		{0.55f, 0.23f, 0.6f, 1.0f}, {0.5f, 0.5f, 0.5f, 1.0f}, {0.15f, 0.23f, 0.45f, 1.0f}, {0.86f, 0.17f, 0.92f, 1.0f}
 	};
 	ben::str120 str_data[] = {
 		"stinky", "chungus", "obamanomics", "epic win!11", "yep"
