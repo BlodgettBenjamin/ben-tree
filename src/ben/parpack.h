@@ -82,6 +82,19 @@ namespace btl
 		};
 
 		template <class NextArg, class... PackArgs>
+		struct referentiality_rec
+		{
+			static constexpr u64 const value =
+				std::is_reference<NextArg>::value + referentiality_rec<PackArgs...>::value;
+		};
+		template <class ArgFinal>
+		struct referentiality_rec<ArgFinal>
+		{
+			static constexpr u64 const value =
+				std::is_reference<ArgFinal>::value ? 1 : 0;
+		};
+
+		template <class NextArg, class... PackArgs>
 		struct containment_rec
 		{
 			static constexpr u64 const value =
@@ -121,6 +134,8 @@ namespace btl
 
 			using pointedness = pointedness_rec<StartArgs, Args...>;
 
+			using referentiality = referentiality_rec<StartArgs, Args...>;
+
 			using containment = containment_rec<StartArgs, Args...>;
 
 			using reflexiveness = reflexiveness_rec<StartArgs, Args...>;
@@ -139,6 +154,8 @@ namespace btl
 		static constexpr u64 triviality = alias::triviality::value;
 
 		static constexpr u64 pointedness = alias::pointedness::value;
+
+		static constexpr u64 referentiality = alias::referentiality::value;
 
 		static constexpr u64 containment = alias::containment::value;
 

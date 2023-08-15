@@ -159,11 +159,12 @@ namespace btl
 	template <class StartArgs, class... Args>
 	tree<StartArgs, Args...>::tree()
 	{
+		static_assert(pack_t::containment == count_t, "tree must contain all parameters which it contains");
 		static_assert(pack_t::reflexiveness == count_t, "all pack parameters must be reflexive");
-		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
 		static_assert(pack_t::is_set, "tree cannot contain duplicate types");
 		static_assert(pack_t::pointedness == 0, "tree layers cannot be comprised of pointers");
-		static_assert(pack_t::containment == count_t, "tree must contain all parameters which it contains");
+		static_assert(pack_t::referentiality == 0, "tree layers cannot be comprised of references");
+		static_assert(pack_t::triviality == count_t, "all pack parameters must be trivially copyable");
 
 		u64* layer_parent_indices[count_t] = { 0 };
 		ben::printf("sizeof(layer_sizes): %u\n", sizeof(layer_sizes));

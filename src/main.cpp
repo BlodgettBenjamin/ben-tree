@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <vector>
-
 #include "ben/comment.h"
 #include "ben/type.h"
 #include "ben/memory.h"
@@ -113,8 +111,11 @@ int main()
 
 	btl::tree<user::vec3, user::color, ben::str120> good_tree;
 	//btl::tree<vec3, color, ben::str120*>            bad_tree; (no layers of pointers)
+	//btl::tree<vec3, color, ben::str120&>            bad_tree; (no layers of references)
 	//btl::tree<vec3, color, ben::stru64>             bad_tree; (cant check for trivial serializeable at compile time so this will compile)
 	//btl::tree<vec3, color, std::vector<ben::str120> bad_tree; (std::vector is clearly not trivially copyable so this wont compile)
+	//struct func { void operator() () { return; } };
+	//btl::tree<user::vec3, user::color, func()>      bad_tree; (functions aren't trivially copyable)
 	if (std::is_trivially_copyable<ben::stru64>::value)
 	{
 		ben::stru64 str0, str1;
