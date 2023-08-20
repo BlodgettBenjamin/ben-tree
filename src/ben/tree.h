@@ -34,20 +34,23 @@ namespace btl
 		// |   - the default ParentBranch value should be used for the 0th layer                          |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <u64 ParentBranch = U64_MAX, class LayerType> void add(const LayerType* data_ptr, u64 count = 1);
+		template <u64 ParentBranch = U64_MAX, class LayerType>
+		void add(const LayerType* data_ptr, u64 count = 1);
 		// x----------------------------------------------------------------------------------------------x
 		// |   - same as regular add but a const reference to the specified parent can be specified       |
 		// |     instead of explicitly specifying the parent branch index as a template parameter         |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <class ParentLayerType, class LayerType> void add_child(const ParentLayerType& parent, const LayerType* data_ptr, u64 count = 1);
+		template <class ParentLayerType, class LayerType>
+		void add_child(const ParentLayerType& parent, const LayerType* data_ptr, u64 count = 1);
 		// x----------------------------------------------------------------------------------------------x
 		// |   - takes const reference of an actual tree value and returns the associated parent          |
 		// |     reference using internal parent indices data                                             |
 		// |   - should not be called for child type corresponding to layer 0                             |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <class ParentLayerType, class LayerType> const ParentLayerType& get_parent(const LayerType& tree_val) const;
+		template <class ParentLayerType, class LayerType>
+		const ParentLayerType& get_parent(const LayerType& tree_val) const;
 		void print_conceptual() const;
 	private:
 		u64   layer_sizes[count_t] = { 0 };
@@ -180,7 +183,8 @@ namespace btl
 	template <class LayerType> u64 tree<StartArgs, Args...>
 	::value_index(const LayerType& value) const
 	{
-		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[pack_t::alias::index<LayerType>::value]);
+		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
+		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[i]);
 		const LayerType* p1 = &value;                                                                                          assert(p0 <= p1);
 		return btl::pointer_offset(p0, p1);
 	}
@@ -286,7 +290,9 @@ namespace btl
 		u64* parent_indices_ptr = layer_parent_indices[this_layer];		                                                       assert(this_layer != 0);
 		u64 parent_index = *(parent_indices_ptr + current_index);                                                              assert(parent_index < layer_sizes[parent_layer]);
 
-		ParentLayerType* parent_ptr = reinterpret_cast<ParentLayerType*>(layer_data[parent_layer]) + parent_index;             assert(parent_ptr != nullptr);
+
+		auto parent_ptr = reinterpret_cast<ParentLayerType*>(layer_data[parent_layer]);                                        assert(parent_ptr != nullptr);
+		parent_ptr += parent_index;
 
 		return *parent_ptr;
 	}
