@@ -2,6 +2,7 @@
 
 #include "type.h"
 #include "memory.h"
+#include "assert.h"
 
 namespace btl
 {
@@ -31,10 +32,15 @@ namespace btl
 		// |   - adds conceptual branches of default count 0 to current layer (if it isnt a leaf layer)   |
 		// |   - adds new data count to the parent's branches at index "ParentBranch"                     |
 		// |   - stores index of parent branch                                                            |
-		// |   - the default ParentBranch value should be used for the 0th layer                          |
 		// x----------------------------------------------------------------------------------------------x
 		//
-		template <u64 ParentBranch = U64_MAX, class LayerType>
+		template <class LayerType>
+		void add(u64 parent_index, const LayerType* data_ptr, u64 count = 1);
+		// x----------------------------------------------------------------------------------------------x
+		// |   - used to add with default parent_index of zero                                            |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		template <class LayerType>
 		void add(const LayerType* data_ptr, u64 count = 1);
 		// x----------------------------------------------------------------------------------------------x
 		// |   - same as regular add but a const reference to the specified parent can be specified       |
@@ -183,8 +189,8 @@ namespace btl
 	template <class LayerType> u64 tree<StartArgs, Args...>
 	::value_index(const LayerType& value) const
 	{
-		const constexpr u64 i = pack_t::alias::index<LayerType>::value;
-		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[i]);
+		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
+		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[t]);
 		const LayerType* p1 = &value;                                                                                          assert(p0 <= p1);
 		return btl::pointer_offset(p0, p1);
 	}
@@ -217,14 +223,14 @@ namespace btl
 	}
 
 	template <class StartArgs, class... Args>
-	template <u64 ParentBranch, class LayerType> void tree<StartArgs, Args...>
-	::add(const LayerType* data_ptr, u64 count)
+	template <class LayerType> void tree<StartArgs, Args...>
+	::add(u64 parent_index, const LayerType* data_ptr, u64 count)
 	{
 		/* asserts */ {
 		// tree must contain specified type                                                    0
-		// base_t must not be specified for ParentBranch                                       1
+		// if LayerType equals base_t then parent_index must equal 0                           1
 		static_assert(pack_t::alias::contains<LayerType>::value,                              "0");
-		static_assert(ParentBranch != 0 || pack_t::alias::index<LayerType>::value != base_t,  "1");
+		BEN_ASSERT(pack_t::alias::index<LayerType>::value != base_t || parent_index == 0,     "1");
 		}
 		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
 
@@ -239,16 +245,22 @@ namespace btl
 		{
 #			pragma warning( push )
 #			pragma warning( disable : 6201 )
+			btl::append_set_allocation(layer_parent_indices[t], parent_index, old_count, new_count);                           assert(layer_branches[t - 1] != nullptr);
 			const constexpr u64 parent_t = t - 1;
-			const constexpr u64 parent_i = ParentBranch == U64_MAX ? 0 : ParentBranch;                                         assert(layer_branches[t - 1] != nullptr);
-			btl::append_set_allocation(layer_parent_indices[t], parent_i, old_count, new_count); 
-			layer_branches[parent_t][parent_i] += count;
+			layer_branches[parent_t][parent_index] += count;
 #			pragma warning( pop )
 		}
 		if (t < leaf_t)
 		{
 			btl::append_allocation0(layer_branches[t], old_count, new_count);
 		}
+	}
+
+	template <class StartArgs, class... Args>
+	template <class LayerType> void tree<StartArgs, Args...>
+	::add(const LayerType* data_ptr, u64 count)
+	{
+		add(0, data_ptr, count);
 	}
 
 	template <class StartArgs, class... Args>

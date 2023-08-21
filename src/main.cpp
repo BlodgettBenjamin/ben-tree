@@ -47,9 +47,9 @@ int main()
 		"stinky", "chungus", "obamanomics", "epic win!11", "yep"
 	};
 	tree.add(vector_data, BEN_COUNTOF(vector_data));
-	tree.add<0>(color_data, BEN_COUNTOF(color_data));
-	tree.add<1>(some_more_color_data, BEN_COUNTOF(some_more_color_data));
-	tree.add<1>(str_data, BEN_COUNTOF(str_data));
+	tree.add(0, color_data, BEN_COUNTOF(color_data));
+	tree.add(1, some_more_color_data, BEN_COUNTOF(some_more_color_data));
+	tree.add(1, str_data, BEN_COUNTOF(str_data));
 
 	ben::stru64 info_buffer_vec3;
 	ben::stru64 info_buffer_color;
