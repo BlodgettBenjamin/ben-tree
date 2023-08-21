@@ -66,6 +66,10 @@ int main()
 
 		info_buffer_color.catf("-{ %.1f, %.1f, %.1f, %.1f }\tparent : -{ %.1f, %.1f, %.1f }\n",
 			color.r, color.g, color.b, color.a, vector.x, vector.y, vector.z);
+
+		assert(tree.contains_value(color));
+		ben::str120 test_str = "test";
+		tree.add_child(color, &test_str);
 	}
 
 	info_buffer_str.catf("layer #%u has a count of %u elements each sized %u bytes\n", tree.index<ben::str120>(), tree.size<ben::str120>(), sizeof(ben::str120));

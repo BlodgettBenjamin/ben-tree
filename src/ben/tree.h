@@ -26,6 +26,9 @@ namespace btl
 		template <class LayerType> u64 value_index(const LayerType& value) const;
 
 		tree();
+
+		template <class LayerType>
+		bool contains_value(const LayerType& value) const;
 		// x----------------------------------------------------------------------------------------------x
 		// |   - increments layer size                                                                    |
 		// |   - adds specified data to corresponding layer allocation                                    |
@@ -109,6 +112,8 @@ namespace btl
 		// |   - btl::tree does not implement an iterator but this will likely change in the future       |
 		// x----------------------------------------------------------------------------------------------x
 		// |   - don't try to declare a type of btl::layer::iterable                                      |
+		// x----------------------------------------------------------------------------------------------x
+		// |   - it would be nice to be able to prevent calling of non-const methods using const auto&    |
 		// x----------------------------------------------------------------------------------------------x
 		//
 		template <typename LayerType, class tree_t>
@@ -223,6 +228,24 @@ namespace btl
 	}
 
 	template <class StartArgs, class... Args>
+	template <class LayerType> bool tree<StartArgs, Args...>
+	::contains_value(const LayerType& value) const
+	{
+		/* asserts */ {
+		// tree must contain specified type                                                    0
+		static_assert(pack_t::alias::contains<LayerType>::value, "0");
+		}
+		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
+		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[t]);
+		const LayerType* p1 = &value;
+		if (p1 < p0)
+			return false;
+		if (pointer_offset(p0, p1) > layer_sizes[t])
+			return false;
+		return true;
+	}
+
+	template <class StartArgs, class... Args>
 	template <class LayerType> void tree<StartArgs, Args...>
 	::add(u64 parent_index, const LayerType* data_ptr, u64 count)
 	{
@@ -268,9 +291,9 @@ namespace btl
 	::add_child(const ParentLayerType& parent, const LayerType* data_ptr, u64 count)
 	{
 		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
-		const constexpr u64 branch = value_index(parent);                                                                      assert(branch < layer_sizes[base_t]);
+		const u64 branch_i = value_index(parent);                                                                              assert(branch_i < layer_sizes[t]);
 
-		add<branch>(data_ptr, count);
+		add(branch_i, data_ptr, count);
 	}
 
 
