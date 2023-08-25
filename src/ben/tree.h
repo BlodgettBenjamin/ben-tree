@@ -26,6 +26,7 @@ namespace btl
 		template <class LayerType> u64 value_index(const LayerType& value) const;
 
 		tree();
+		tree(const tree<StartArgs, Args...>& tree_cpy);
 
 		template <class LayerType>
 		bool contains_value(const LayerType& value) const;
@@ -61,6 +62,18 @@ namespace btl
 		template <class ParentLayerType, class LayerType>
 		const ParentLayerType& get_parent(const LayerType& tree_val) const;
 		void print_conceptual() const;
+	private:
+		// x----------------------------------------------------------------------------------------------x
+		// |   - recursively resizes the three heap allocations for each tree pack parameter              |
+		// |   - should not be calling this if layer_sizes is still zero initialized                      |
+		// x----------------------------------------------------------------------------------------------x
+		//
+		template <class StartType, class... TypeArgs>
+		void rec_size_allocations();
+		template <class NextType, class... TypeArgs>
+		void rec_size_allocations(u64 t);
+		template <class FinalType>
+		void rec_size_allocations(u64 t);
 	private:
 		u64   layer_sizes[count_t] = { 0 };
 		void* layer_data[count_t] = { 0 };
@@ -228,12 +241,34 @@ namespace btl
 	}
 
 	template <class StartArgs, class... Args>
+	tree<StartArgs, Args...>
+	::tree(const tree<StartArgs, Args...>& tree_cpy)
+	{
+		/* asserts */ {
+			// tree must contain all parameters which it contains                                  0   
+			// all pack parameters must be reflexive                                               1   
+			// tree cannot contain duplicate types                                                 2   
+			// tree layers cannot be comprised of pointers                                         3   
+			// tree layers cannot be comprised of references                                       4   
+			// all pack parameters must be trivially copyable                                      5   
+			static_assert(pack_t::containment == count_t, "0");
+			static_assert(pack_t::reflexiveness == count_t, "1");
+			static_assert(pack_t::is_set, "2");
+			static_assert(pack_t::pointedness == 0, "3");
+			static_assert(pack_t::referentiality == 0, "4");
+			static_assert(pack_t::triviality == count_t, "5");
+		}
+		btl::memory_copy(layer_sizes, tree_cpy.layer_sizes, count_t);
+		rec_size_allocations(layer_sizes);
+	}
+
+	template <class StartArgs, class... Args>
 	template <class LayerType> bool tree<StartArgs, Args...>
 	::contains_value(const LayerType& value) const
 	{
 		/* asserts */ {
 		// tree must contain specified type                                                    0
-		static_assert(pack_t::alias::contains<LayerType>::value, "0");
+		static_assert(pack_t::alias::contains<LayerType>::value,                              "0");
 		}
 		const constexpr u64 t = pack_t::alias::index<LayerType>::value;
 		const LayerType* p0 = reinterpret_cast<LayerType*>(layer_data[t]);
@@ -334,7 +369,8 @@ namespace btl
 
 
 	template <class StartArgs, class... Args>
-	void tree<StartArgs, Args...>::print_conceptual() const
+	void tree<StartArgs, Args...>::
+	print_conceptual() const
 	{
 		for (u64 t = base_t; t < leaf_t; t++)
 		{
@@ -351,5 +387,45 @@ namespace btl
 				ben::printf("}\n");
 			}
 		}
+	}
+
+	template <class StartArgs, class... Args>
+	template <class StartType, class... TypeArgs>
+	void tree<StartArgs, Args...>::
+	rec_size_allocations()
+	{
+		btl::resize_allocation<StartType>(layer_data          [0], layer_sizes[0]);
+		btl::resize_allocation<StartType>(layer_branches      [0], layer_sizes[0]);
+		btl::resize_allocation<StartType>(layer_parent_indices[0], layer_sizes[0]);
+
+		rec_size_allocations<Args...>(1);
+	}
+
+	template <class StartArgs, class... Args>
+	template <class NextType, class... TypeArgs>
+	void tree<StartArgs, Args...>::
+	rec_size_allocations(u64 t)
+	{
+		btl::resize_allocation<NextType>(layer_data          [t], layer_sizes[t]);
+		btl::resize_allocation<NextType>(layer_branches      [t], layer_sizes[t]);
+		btl::resize_allocation<NextType>(layer_parent_indices[t], layer_sizes[t]);
+
+		rec_size_allocations<Args...>(t + 1);
+	}
+
+	template <class StartArgs, class... Args>
+	template <class FinalType>
+	void tree<StartArgs, Args...>::
+	rec_size_allocations(u64 t)
+	{
+		/* asserts */ {
+			// rec_size t is less than expected                                                0 
+			// rec_size t is greater than expected                                             1 
+			static_assert(t >= count_t - 1,                                                   "0");
+			static_assert(t <= count_t - 1,                                                   "1");
+		}
+		btl::resize_allocation<FinalType>(layer_data          [t], layer_sizes[t]);
+		btl::resize_allocation<FinalType>(layer_branches      [t], layer_sizes[t]);
+		btl::resize_allocation<FinalType>(layer_parent_indices[t], layer_sizes[t]);
 	}
 }

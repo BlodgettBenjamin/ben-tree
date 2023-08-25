@@ -129,5 +129,7 @@ int main()
 
 	tree.print_conceptual();
 
+	ben::printf("sizeof(tree_t): %u", sizeof(tree));
+
 	return 0;
 }

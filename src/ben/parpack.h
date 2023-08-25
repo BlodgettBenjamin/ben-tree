@@ -42,6 +42,18 @@ namespace btl
 				std::is_same<T, ArgFinal>::value ? N : U64_MAX;
 		};
 
+		template <u64 N, u64 I, class NextArg, class... PackArgs>
+		struct size_rec
+		{
+			static constexpr u64 const value =
+				N == I ? sizeof(NextArg) : size_rec<N, I + 1, PackArgs...>::value;
+		};
+		template <u64 N, u64 I, class ArgFinal>
+		struct size_rec<N, I, ArgFinal>
+		{
+			static constexpr u64 const value =
+				N == I ? sizeof(ArgFinal) : U64_MAX;
+		};
 
 		template <class NextArg, class... PackArgs>
 		struct is_set_rec
@@ -120,6 +132,15 @@ namespace btl
 				std::is_same<ArgFinal, ArgFinal>::value;
 		};
 	public:
+		struct type
+		{
+			template <u64 N>
+			using size = size_rec<N, 0, StartArgs, Args...>;
+		};
+
+		template <u64 N>
+		static constexpr u64 size = type::size<N>::value;
+
 		struct alias
 		{
 			template <class T>
