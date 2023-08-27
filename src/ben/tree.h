@@ -69,11 +69,11 @@ namespace btl
 		// x----------------------------------------------------------------------------------------------x
 		//
 		template <class StartType, class... TypeArgs>
-		void rec_size_allocations();
+		void rec_copy_allocations(const tree<StartArgs, Args...>& tree_cpy);
 		template <class NextType, class... TypeArgs>
-		void rec_size_allocations(u64 t);
+		void rec_copy_allocations(const tree<StartArgs, Args...>& tree_cpy, u64 t);
 		template <class FinalType>
-		void rec_size_allocations(u64 t);
+		void rec_copy_allocations(const tree<StartArgs, Args...>& tree_cpy, u64 t);
 	private:
 		u64   layer_sizes[count_t] = { 0 };
 		void* layer_data[count_t] = { 0 };
@@ -259,7 +259,7 @@ namespace btl
 			static_assert(pack_t::triviality == count_t, "5");
 		}
 		btl::memory_copy(layer_sizes, tree_cpy.layer_sizes, count_t);
-		rec_size_allocations(layer_sizes);
+		rec_copy_allocations(tree_cpy);
 	}
 
 	template <class StartArgs, class... Args>
@@ -392,31 +392,31 @@ namespace btl
 	template <class StartArgs, class... Args>
 	template <class StartType, class... TypeArgs>
 	void tree<StartArgs, Args...>::
-	rec_size_allocations()
+	rec_copy_allocations(const tree<StartArgs, Args...>& tree_cpy)
 	{
-		btl::resize_allocation<StartType>(layer_data          [0], layer_sizes[0]);
-		btl::resize_allocation<StartType>(layer_branches      [0], layer_sizes[0]);
-		btl::resize_allocation<StartType>(layer_parent_indices[0], layer_sizes[0]);
+		btl::replicate_allocation<StartType>(layer_data          [0], tree_cpy.layer_data          [0], layer_sizes[0]);
+		btl::replicate_allocation           (layer_branches      [0], tree_cpy.layer_branches      [0], layer_sizes[0]);
+		btl::replicate_allocation           (layer_parent_indices[0], tree_cpy.layer_parent_indices[0], layer_sizes[0]);
 
-		rec_size_allocations<Args...>(1);
+		rec_copy_allocations<Args...>(1);
 	}
 
 	template <class StartArgs, class... Args>
 	template <class NextType, class... TypeArgs>
 	void tree<StartArgs, Args...>::
-	rec_size_allocations(u64 t)
+	rec_copy_allocations(const tree<StartArgs, Args...>& tree_cpy, u64 t)
 	{
-		btl::resize_allocation<NextType>(layer_data          [t], layer_sizes[t]);
-		btl::resize_allocation<NextType>(layer_branches      [t], layer_sizes[t]);
-		btl::resize_allocation<NextType>(layer_parent_indices[t], layer_sizes[t]);
+		btl::replicate_allocation<NextType>(layer_data          [t], tree_cpy.layer_data          [t], layer_sizes[t]);
+		btl::replicate_allocation          (layer_branches      [t], tree_cpy.layer_branches      [t], layer_sizes[t]);
+		btl::replicate_allocation          (layer_parent_indices[t], tree_cpy.layer_parent_indices[t], layer_sizes[t]);
 
-		rec_size_allocations<Args...>(t + 1);
+		rec_copy_allocations<Args...>(t + 1);
 	}
 
 	template <class StartArgs, class... Args>
 	template <class FinalType>
 	void tree<StartArgs, Args...>::
-	rec_size_allocations(u64 t)
+	rec_copy_allocations(const tree<StartArgs, Args...>& tree_cpy, u64 t)
 	{
 		/* asserts */ {
 			// rec_size t is less than expected                                                0 
@@ -424,8 +424,8 @@ namespace btl
 			static_assert(t >= count_t - 1,                                                   "0");
 			static_assert(t <= count_t - 1,                                                   "1");
 		}
-		btl::resize_allocation<FinalType>(layer_data          [t], layer_sizes[t]);
-		btl::resize_allocation<FinalType>(layer_branches      [t], layer_sizes[t]);
-		btl::resize_allocation<FinalType>(layer_parent_indices[t], layer_sizes[t]);
+		btl::replicate_allocation<FinalType>(layer_data          [t], tree_cpy.layer_data          [t], layer_sizes[t]);
+		btl::replicate_allocation           (layer_branches      [t], tree_cpy.layer_branches      [t], layer_sizes[t]);
+		btl::replicate_allocation           (layer_parent_indices[t], tree_cpy.layer_parent_indices[t], layer_sizes[t]);
 	}
 }

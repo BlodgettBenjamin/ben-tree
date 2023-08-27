@@ -8,6 +8,10 @@
 
 namespace btl
 {
+	// x----------------------------------------------------------------------------------------------x
+	// |   - only disambiguate typename T for void*                                                   |
+	// x----------------------------------------------------------------------------------------------x
+	//
 	template <typename T> inline u64 pointer_offset(const T* pointer1, const T* pointer2);
 	template <typename T> inline void* reallocate(T* ptr, u64 new_count);
 	template <typename T> inline void* memory_copy(T* dst_ptr, const T* src_ptr, u64 count_t = 1);
@@ -16,6 +20,7 @@ namespace btl
 	template <typename T> inline void* append_allocation(T*& dst_ptr, const T* src_ptr, u64 old_count_t, u64 new_count_t = 1);
 	template <typename T> inline void* append_set_allocation(T*& dst_ptr, const T& src_val, u64 old_count_t, u64 new_count_t = 1);
 	template <typename T> inline void* append_allocation0(T*& dst_ptr, u64 old_count_t, u64 new_count_t = 1);
+	template <typename T> inline void* replicate_allocation(T*& dst_ptr, const T* src_ptr, u64 new_count_t);
 }
 
 template <typename T>
@@ -102,6 +107,14 @@ inline void* btl::append_allocation0(T*& dst_ptr, u64 old_count_t, u64 new_count
 
 	btl::resize_allocation(dst_ptr, new_count_t);
 	memset(dst_ptr + old_count_t, 0, sizeof(T) * (new_count_t - old_count_t));
+	return dst_ptr;
+}
+
+template <typename T>
+inline void* btl::replicate_allocation(T*& dst_ptr, const T* src_ptr, u64 new_count_t)
+{
+	btl::resize_allocation(dst_ptr, new_count_t);
+	btl::memory_copy(dst_ptr, src_ptr, new_count_t);
 	return dst_ptr;
 }
 
